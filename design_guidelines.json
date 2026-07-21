@@ -1,0 +1,150 @@
+{
+  "project_name": "WebBuilder OS",
+  "theme": "dark-first",
+  "typography": {
+    "headings": {
+      "font_family": "Outfit",
+      "weights": ["400", "500", "600", "700"],
+      "tracking": "tracking-tight",
+      "usage": "Use for all H1-H4. Never use Inter for headings."
+    },
+    "body": {
+      "font_family": "Manrope",
+      "weights": ["400", "500", "600"],
+      "tracking": "tracking-normal",
+      "usage": "Use for all paragraphs, labels, and lists."
+    },
+    "data": {
+      "font_family": "JetBrains Mono",
+      "weights": ["400", "500"],
+      "usage": "Use for financial numbers, metrics, and code snippets."
+    }
+  },
+  "colors": {
+    "archetype": "High-Contrast Swiss & Premium SaaS",
+    "dark_mode": {
+      "background": "#09090B",
+      "surface": "#141418",
+      "surface_elevated": "#1F1F24",
+      "border": "#27272A",
+      "text_primary": "#FAFAFA",
+      "text_secondary": "#A1A1AA",
+      "text_muted": "#52525B",
+      "accent_primary": "#4F46E5",
+      "accent_hover": "#6366F1",
+      "success": "#10B981",
+      "warning": "#F59E0B",
+      "error": "#EF4444"
+    },
+    "light_mode": {
+      "background": "#FAFAFA",
+      "surface": "#FFFFFF",
+      "surface_elevated": "#F4F4F5",
+      "border": "#E4E4E7",
+      "text_primary": "#09090B",
+      "text_secondary": "#52525B",
+      "text_muted": "#A1A1AA",
+      "accent_primary": "#4F46E5",
+      "accent_hover": "#4338CA",
+      "success": "#059669",
+      "warning": "#D97706",
+      "error": "#DC2626"
+    }
+  },
+  "visual_enhancers": {
+    "glassmorphism": "Use backdrop-blur-xl with bg-black/40 (dark) or bg-white/70 (light) + 1px border. Never use pure transparent backgrounds for headers/dropdowns.",
+    "borders": "1px solid border-border. Cards should not have shadows in dark mode; use surface lightness for elevation.",
+    "radius": "rounded-lg for components, rounded-xl for cards, rounded-2xl for modals. Keep it clean and consistent.",
+    "shadows": "Ambient diffuse shadows for light mode. Zero shadows for dark mode, rely on border and background lightness.",
+    "textures": "Subtle grain texture overlay for marketing pages or login background."
+  },
+  "components": {
+    "buttons": "Pill-shaped (rounded-full) or sharp (rounded-lg) with smooth hover transitions (bg and text color change).",
+    "cards": "Dense styling, 1px border, subtle background shift on hover.",
+    "inputs": "Use Shadcn customized inputs. Dark mode inputs should be bg-zinc-900 border-zinc-800 focus:border-indigo-500.",
+    "tables": "Dense, grid-lines visible on bottom border only. Hover state on rows.",
+    "charts": "Recharts with custom tooltips, use accent colors and gradients that fade into the background."
+  },
+  "grids": {
+    "dashboard_bento": "grid-cols-1 md:grid-cols-3 lg:grid-cols-4 with gap-4 or gap-6. Stretch items using h-full.",
+    "marketing_tetris": "grid-cols-1 md:grid-cols-12 gap-8 for landing/marketing pages."
+  },
+  "layouts": {
+    "spacing": "Generous. p-6 or p-8 for inner card padding. gap-6 for form elements.",
+    "alignment": "Left-align dense content/data. Center-align only hero sections if needed.",
+    "navigation": "Sidebar for Dashboard/Admin. Sticky Glassmorphism Header for Website Builder/Marketing."
+  },
+  "motion": {
+    "transitions": "Specific property transitions (e.g., transition-colors duration-200, transition-transform). NO 'transition-all'.",
+    "interactions": "Hover states must increase brightness/contrast. Buttons scale slightly (active:scale-95).",
+    "page_load": "Staggered fade-in and slide-up (translate-y-4) for dashboard widgets."
+  },
+  "accessibility": {
+    "contrast": "Ensure > 4.5:1 for text. Hover states must have explicitly defined text colors.",
+    "focus": "focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:outline-none",
+    "testing": "All interactive elements MUST have data-testid attributes (e.g., data-testid='sidebar-nav-link')."
+  },
+  "media": {
+    "icons": "lucide-react for standard dashboard icons. @phosphor-icons/react for marketing/high-end UI.",
+    "images": "Images must have max-h-[80vh] on mobile. Dark overlays (bg-black/40) for text-on-image."
+  },
+  "3d_libraries": {
+    "usage": "Use Recharts for Data analytics. No Heavy 3D required for strict OS dash unless marketing pages."
+  },
+  "image_urls": [
+    {
+      "url": "https://images.unsplash.com/photo-1638864616275-9f0b291a2eb6?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NjA2MjJ8MHwxfHNlYXJjaHwyfHxhYnN0cmFjdCUyMGRhcmslMjBnZW9tZXRyaWMlMjBiYWNrZ3JvdW5kfGVufDB8fHx8MTc4NDYzMjAxM3ww&ixlib=rb-4.1.0&q=85",
+      "category": "background",
+      "description": "Abstract dark geometric background for Login/Register page or Hero section."
+    },
+    {
+      "url": "https://images.unsplash.com/photo-1556761175-4b46a572b786?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NjY2NzN8MHwxfHNlYXJjaHwzfHxtb2Rlcm4lMjB0ZWNoJTIwb2ZmaWNlJTIwdGVhbXxlbnwwfHx8fDE3ODQ2MzIwMTR8MA&ixlib=rb-4.1.0&q=85",
+      "category": "office_team",
+      "description": "Modern tech office team for HR module or About Us."
+    },
+    {
+      "url": "https://images.unsplash.com/photo-1522071820081-009f0129c71c?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NjY2NzN8MHwxfHNlYXJjaHwxfHxtb2Rlcm4lMjB0ZWNoJTIwb2ZmaWNlJTIwdGVhbXxlbnwwfHx8fDE3ODQ2MzIwMTR8MA&ixlib=rb-4.1.0&q=85",
+      "category": "office_team",
+      "description": "Group using laptop for CRM or Collaboration headers."
+    },
+    {
+      "url": "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NTYxOTB8MHwxfHNlYXJjaHwxfHxwcm9mZXNzaW9uYWwlMjBoZWFkc2hvdCUyMHBvcnRyYWl0fGVufDB8fHx8MTc4NDYzMjAxM3ww&ixlib=rb-4.1.0&q=85",
+      "category": "avatar",
+      "description": "Male professional headshot for Founder/User avatar."
+    },
+    {
+      "url": "https://images.unsplash.com/photo-1494790108377-be9c29b29330?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NTYxOTB8MHwxfHNlYXJjaHwzfHxwcm9mZXNzaW9uYWwlMjBoZWFkc2hvdCUyMHBvcnRyYWl0fGVufDB8fHx8MTc4NDYzMjAxM3ww&ixlib=rb-4.1.0&q=85",
+      "category": "avatar",
+      "description": "Female professional headshot for Client/Employee avatar."
+    },
+    {
+      "url": "https://images.pexels.com/photos/7827838/pexels-photo-7827838.jpeg?auto=compress&cs=tinysrgb&dpr=2&h=650&w=940",
+      "category": "background",
+      "description": "Minimalistic split geometric background for Design Studio or creative placeholders."
+    }
+  ],
+  "general_ui_ux_design_guidelines": [
+    "Do not converge toward generic outputs. Use the distinct Premium SaaS/Linear aesthetic.",
+    "Do not use pure black (#000000) or pure white (#FFFFFF) for backgrounds. Use tinted greys (#09090B).",
+    "Never use generic centered layouts for dashboards. Use High Density Bento Grids.",
+    "Create depth through border colors and background lightness in dark mode, not heavy shadows.",
+    "Never use `transition: all`. Target specific properties.",
+    "Never center-align the app container globally (`.App { text-align: center; }` is forbidden).",
+    "Never use AI assistant emoji characters for icons. Use Phosphor or Lucide icons.",
+    "Always use sonner for toasts.",
+    "Always ensure hover states have higher contrast and explicitly defined text colors.",
+    "Do not use complete transparent background in header, overlays, any surface that has content under it.",
+    "All interactive and key informational elements MUST include a data-testid attribute."
+  ],
+  "instructions_to_main_agent": [
+    "NOTE: The codebase uses .js files, NOT .tsx. Provide all React components as standard .jsx/.js files.",
+    "Implement WebBuilder OS primarily in Dark Mode using the color tokens provided.",
+    "Ensure `data-testid` is added to ALL interactive elements (buttons, nav links, inputs).",
+    "Use standard HTML/Tailwind for marketing/creative layouts. Use Shadcn components for complex logic.",
+    "Override default Shadcn styles to match the borderless, tight-spacing, premium dark aesthetic.",
+    "Do not use generic font Inter for headings. Ensure `Outfit` is loaded.",
+    "Build the dashboard layouts using a Bento Grid approach with dense data widgets.",
+    "Use the provided image URLs to replace any placeholders. Never use via.placeholder.com or similar.",
+    "Ensure the Design Studio and Admin Portal have sticky navigation and clear visual hierarchy."
+  ]
+}
