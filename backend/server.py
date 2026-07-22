@@ -181,6 +181,10 @@ async def login(data: LoginRequest):
     if not verify_password(data.password, user_doc['password_hash']):
         raise HTTPException(status_code=401, detail="Invalid credentials")
     
+    # Check account status
+    if user_doc.get('status') in ['suspended', 'inactive']:
+        raise HTTPException(status_code=403, detail=f"Account is {user_doc['status']}. Contact your administrator.")
+    
     # Create session
     session_token = f"session_{uuid.uuid4().hex}"
     session = UserSession(
@@ -742,20 +746,165 @@ async def admin_stats(user: User = Depends(get_current_user)):
 
 @api_router.put("/admin/users/{user_id}")
 async def admin_update_user(user_id: str, request: Request, user: User = Depends(get_current_user)):
-    """Admin: update user (role, status, etc.)"""
+    """Admin: update user (username, name, email, role, status, department, job_title, permissions)"""
     if user.role not in ['owner', 'admin']:
         raise HTTPException(status_code=403, detail="Admin access required")
     
     body = await request.json()
-    allowed_fields = ['name', 'role', 'status', 'department', 'job_title', 'permissions']
+    allowed_fields = ['username', 'name', 'email', 'role', 'status', 'department', 'job_title', 'permissions']
     updates = {k: v for k, v in body.items() if k in allowed_fields}
+    
+    if not updates:
+        raise HTTPException(status_code=400, detail="No valid fields to update")
+    
+    # If changing username, verify it's not taken
+    if 'username' in updates:
+        new_username = updates['username'].strip()
+        if not new_username:
+            raise HTTPException(status_code=400, detail="Username cannot be empty")
+        clash = await db.users.find_one({"username": new_username, "user_id": {"$ne": user_id}})
+        if clash:
+            raise HTTPException(status_code=409, detail=f"Username '{new_username}' is already taken")
+        updates['username'] = new_username
+    
+    # If changing email, verify it's not taken
+    if 'email' in updates:
+        new_email = updates['email'].strip()
+        clash = await db.users.find_one({"email": new_email, "user_id": {"$ne": user_id}})
+        if clash:
+            raise HTTPException(status_code=409, detail=f"Email '{new_email}' is already taken")
+        updates['email'] = new_email
+    
     updates['updated_at'] = datetime.now(timezone.utc).isoformat()
     
     result = await db.users.update_one({"user_id": user_id}, {"$set": updates})
     if result.matched_count == 0:
         raise HTTPException(status_code=404, detail="User not found")
     
-    return {"message": "User updated", "user_id": user_id}
+    return {"message": "User updated", "user_id": user_id, "updated_fields": list(updates.keys())}
+
+@api_router.post("/admin/users/{user_id}/reset-password")
+async def admin_reset_password(user_id: str, request: Request, user: User = Depends(get_current_user)):
+    """Admin: reset a user's password. Body: {"new_password": "..."} or empty for auto-generated"""
+    if user.role not in ['owner', 'admin']:
+        raise HTTPException(status_code=403, detail="Admin access required")
+    
+    body = await request.json() if request.headers.get('content-length', '0') != '0' else {}
+    new_password = body.get('new_password', '').strip()
+    
+    # If no password provided, auto-generate a strong one
+    if not new_password:
+        new_password = f"WB-{uuid.uuid4().hex[:10]}"
+    
+    if len(new_password) < 4:
+        raise HTTPException(status_code=400, detail="Password must be at least 4 characters")
+    
+    target = await db.users.find_one({"user_id": user_id})
+    if not target:
+        raise HTTPException(status_code=404, detail="User not found")
+    
+    await db.users.update_one(
+        {"user_id": user_id},
+        {"$set": {
+            "password_hash": hash_password(new_password),
+            "updated_at": datetime.now(timezone.utc).isoformat()
+        }}
+    )
+    
+    # Invalidate all existing sessions for security
+    await db.user_sessions.delete_many({"user_id": user_id})
+    
+    return {
+        "message": "Password reset successfully",
+        "user_id": user_id,
+        "new_password": new_password,
+        "sessions_invalidated": True
+    }
+
+@api_router.post("/admin/users/{user_id}/force-logout")
+async def admin_force_logout(user_id: str, user: User = Depends(get_current_user)):
+    """Admin: revoke all active sessions for a user"""
+    if user.role not in ['owner', 'admin']:
+        raise HTTPException(status_code=403, detail="Admin access required")
+    
+    if user_id == user.user_id:
+        raise HTTPException(status_code=400, detail="Cannot force logout yourself")
+    
+    result = await db.user_sessions.delete_many({"user_id": user_id})
+    return {"message": "User logged out", "sessions_revoked": result.deleted_count}
+
+@api_router.get("/admin/sessions")
+async def admin_list_sessions(user: User = Depends(get_current_user)):
+    """Admin: list all active sessions with user info"""
+    if user.role not in ['owner', 'admin']:
+        raise HTTPException(status_code=403, detail="Admin access required")
+    
+    # Get all non-expired sessions
+    now_iso = datetime.now(timezone.utc).isoformat()
+    sessions = await db.user_sessions.find(
+        {"expires_at": {"$gt": now_iso}},
+        {"_id": 0}
+    ).sort("created_at", -1).to_list(500)
+    
+    # Enrich with user info
+    user_ids = list({s['user_id'] for s in sessions})
+    users_map = {}
+    if user_ids:
+        users_cur = await db.users.find(
+            {"user_id": {"$in": user_ids}},
+            {"_id": 0, "user_id": 1, "username": 1, "name": 1, "email": 1, "role": 1}
+        ).to_list(1000)
+        users_map = {u['user_id']: u for u in users_cur}
+    
+    enriched = []
+    for s in sessions:
+        u = users_map.get(s['user_id'], {})
+        enriched.append({
+            **s,
+            "session_token": s.get('session_token', '')[:16] + '...',  # Truncate for display
+            "user": u
+        })
+    
+    return {"sessions": enriched, "total": len(enriched)}
+
+@api_router.delete("/admin/sessions/{session_token_prefix}")
+async def admin_revoke_session(session_token_prefix: str, user: User = Depends(get_current_user)):
+    """Admin: revoke a specific session by token prefix (first 16 chars)"""
+    if user.role not in ['owner', 'admin']:
+        raise HTTPException(status_code=403, detail="Admin access required")
+    
+    # Match session by token prefix
+    result = await db.user_sessions.delete_many({
+        "session_token": {"$regex": f"^{session_token_prefix.replace('...', '')}"}
+    })
+    return {"message": "Session revoked", "sessions_deleted": result.deleted_count}
+
+@api_router.put("/admin/users/{user_id}/toggle-status")
+async def admin_toggle_status(user_id: str, request: Request, user: User = Depends(get_current_user)):
+    """Admin: enable or disable a user account. Body: {"status": "active"|"suspended"|"inactive"}"""
+    if user.role not in ['owner', 'admin']:
+        raise HTTPException(status_code=403, detail="Admin access required")
+    
+    if user_id == user.user_id:
+        raise HTTPException(status_code=400, detail="Cannot change your own status")
+    
+    body = await request.json()
+    new_status = body.get('status', 'active')
+    if new_status not in ['active', 'inactive', 'suspended']:
+        raise HTTPException(status_code=400, detail="Invalid status")
+    
+    result = await db.users.update_one(
+        {"user_id": user_id},
+        {"$set": {"status": new_status, "updated_at": datetime.now(timezone.utc).isoformat()}}
+    )
+    if result.matched_count == 0:
+        raise HTTPException(status_code=404, detail="User not found")
+    
+    # If disabling, revoke sessions
+    if new_status in ['inactive', 'suspended']:
+        await db.user_sessions.delete_many({"user_id": user_id})
+    
+    return {"message": f"User status set to {new_status}", "user_id": user_id}
 
 @api_router.delete("/admin/users/{user_id}")
 async def admin_delete_user(user_id: str, user: User = Depends(get_current_user)):
@@ -1212,7 +1361,7 @@ async def startup():
         },
         {
             "username": "Utkarsh",
-            "password": "2010@",
+            "password": "2010#",
             "name": "Utkarsh Mishra",
             "email": "utkarsh@webbuilder.com",
             "role": "owner",
@@ -1226,35 +1375,35 @@ async def startup():
             "name": "System Administrator",
             "email": "admin@webbuilder.com",
             "role": "admin",
-            "job_title": "Administrator",
+            "job_title": "Super Admin",
             "department": "Admin Portal",
             "permissions": ["*"],
         },
         {
-            "username": "Tech",
-            "password": "2010@",
-            "name": "Technical Lead",
-            "email": "tech@webbuilder.com",
+            "username": "Manglam",
+            "password": "8080@",
+            "name": "Manglam",
+            "email": "manglam@webbuilder.com",
             "role": "manager",
             "job_title": "Head of Technical & Design",
             "department": "Technical & Design Office",
             "permissions": ["view_users", "create_client", "create_project"],
         },
         {
-            "username": "Finance",
-            "password": "2010@",
-            "name": "Finance Manager",
-            "email": "finance@webbuilder.com",
+            "username": "Astha",
+            "password": "2010&",
+            "name": "Astha",
+            "email": "astha@webbuilder.com",
             "role": "manager",
             "job_title": "Head of Finance",
             "department": "Finance Office",
             "permissions": ["view_users", "create_client", "manage_billing"],
         },
         {
-            "username": "Collab",
-            "password": "2010@",
-            "name": "Collaboration Lead",
-            "email": "collab@webbuilder.com",
+            "username": "shubham",
+            "password": "2010+",
+            "name": "Shubham",
+            "email": "shubham@webbuilder.com",
             "role": "manager",
             "job_title": "Head of Collaboration",
             "department": "Collaboration Office",
@@ -1262,30 +1411,39 @@ async def startup():
         },
     ]
     
+    # ---- Step 1: One-time cleanup of obsolete usernames (from previous seed pass) ----
+    obsolete_usernames = ["Tech", "Finance", "Collab"]
+    for old_uname in obsolete_usernames:
+        # Do NOT delete if role is owner/admin (safety guard)
+        result = await db.users.delete_many({"username": old_uname, "role": {"$nin": ["owner", "admin"]}})
+        if result.deleted_count:
+            logger.info(f"Removed obsolete seed account: {old_uname}")
+
+    # ---- Step 2: One-time migration for accounts that need password/username reset ----
+    # If Utkarsh account exists with OLD password 2010@, migrate to new password 2010#
+    utkarsh_existing = await db.users.find_one({"username": "Utkarsh"})
+    if utkarsh_existing and utkarsh_existing.get("password_hash"):
+        try:
+            if verify_password("2010@", utkarsh_existing["password_hash"]):
+                await db.users.update_one(
+                    {"user_id": utkarsh_existing["user_id"]},
+                    {"$set": {
+                        "password_hash": hash_password("2010#"),
+                        "updated_at": datetime.now(timezone.utc).isoformat()
+                    }}
+                )
+                logger.info("Migrated Utkarsh password (2010@ -> 2010#)")
+        except Exception as e:
+            logger.error(f"Utkarsh migration check failed: {e}")
+
+    # ---- Step 3: Seed accounts that are missing (never overwrite existing) ----
+    # This ensures Super Admin password/username changes persist across restarts.
     for acct in seed_accounts:
         existing = await db.users.find_one(
             {"$or": [{"email": acct["email"]}, {"username": acct["username"]}]}
         )
         if existing:
-            # Backfill/upgrade existing account to match seed config exactly
-            # (safe because these are the canonical WebBuilder OS system accounts)
-            updates = {
-                "username": acct["username"],
-                "name": acct["name"],
-                "email": acct["email"],
-                "password_hash": hash_password(acct["password"]),
-                "role": acct["role"],
-                "job_title": acct["job_title"],
-                "department": acct["department"],
-                "permissions": acct["permissions"],
-                "status": "active",
-                "updated_at": datetime.now(timezone.utc).isoformat(),
-            }
-            await db.users.update_one(
-                {"user_id": existing["user_id"]},
-                {"$set": updates}
-            )
-            logger.info(f"Synced seed account: {acct['username']} ({acct['email']})")
+            # Account exists - do NOT modify (respect Super Admin changes)
             continue
         
         user = User(
