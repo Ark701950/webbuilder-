@@ -43,23 +43,12 @@ Build WebBuilder OS - a complete enterprise AI Business Operating System combini
 - Every module integrates with every other module
 - Modular, scalable, no isolated features
 
-## What's Been Implemented (2026-02-XX)
-✅ Foundation architecture (backend + frontend)
-✅ Design system with dark/light theme, custom fonts, semantic color tokens
-✅ Authentication: JWT + email/password + Google OAuth (Emergent Auth)
-✅ Session management with database storage + httpOnly cookie support
-✅ RBAC framework (roles, permissions, check_permission, require_permission)
-✅ Object storage integration (Emergent Storage API)
-✅ Complete database models for 20+ entities
-✅ Reusable layout: Sidebar (11 modules + Admin), Header (search, notifications, user menu, logout), MainLayout
-✅ Login page (dark, split-screen with branding image)
-✅ Register page (dark, split-screen with branding image)
-✅ Dashboard with stat cards, quick actions, recent activity (Bento grid layout)
-✅ CRM: Clients + Leads with create modal, tabs, stats, list view
-✅ Projects: Project cards with progress bars, create modal, stats
-✅ AI Chat backend endpoint (streaming SSE) - OpenAI + Claude via Emergent LLM Key
-✅ File upload/download via object storage
-✅ 100% test pass rate (backend 10/10 + frontend E2E all critical flows)
+## What's Been Implemented (Iterations 1-3)
+✅ **Foundation** (iter 1): Auth (JWT + Google OAuth), RBAC, MongoDB models, dark-first design system with Outfit/Manrope fonts, Sidebar+Header layout, Login/Register, Dashboard, CRM (Clients+Leads), Projects
+✅ **AI + Modules** (iter 3): AI Assistant with GPT-5.2/Claude Sonnet 4.6 model switcher (streaming + non-streaming), conversation history sidebar, Documents (create + file upload), Admin Portal (users table, edit/suspend, roles tab, settings), HR (employees + departments + leaves), Finance (transactions + invoices + summary), Calendar (month grid + upcoming events), Analytics (Recharts: line/bar/pie + KPI cards), Design Studio (theme picker + font selector + logo upload + layout options)
+✅ **Reusable UI Kit**: PageHeader, StatCard, Modal, Input, Select, Textarea, Button, Badge, EmptyState (single source at `/components/ui-kit.js`)
+✅ **Object Storage**: File upload/download working via Emergent Storage API
+✅ **Testing**: 21/21 backend pytest pass, 100% frontend E2E on all create flows including AI chat
 
 ## Prioritized Backlog
 
