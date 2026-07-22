@@ -1,34 +1,164 @@
-.App-logo {
-    height: 40vmin;
-    pointer-events: none;
+/* WebBuilder OS Styles */
+
+/* No global text-align center - this breaks natural reading flow */
+.App {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
 }
 
-@media (prefers-reduced-motion: no-preference) {
-    .App-logo {
-        animation: App-logo-spin infinite 20s linear;
-    }
+/* Glassmorphism Utility */
+.glass {
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
 }
 
-.App-header {
-    background-color: #0f0f10;
-    min-height: 100vh;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    font-size: calc(10px + 2vmin);
-    color: white;
+.glass-dark {
+  @apply bg-black/40 border border-white/10;
 }
 
-.App-link {
-    color: #61dafb;
+.glass-light {
+  @apply bg-white/70 border border-black/10;
 }
 
-@keyframes App-logo-spin {
-    from {
-        transform: rotate(0deg);
-    }
-    to {
-        transform: rotate(360deg);
-    }
+/* Button Animations */
+.btn-scale {
+  transition: transform 200ms ease;
+}
+
+.btn-scale:active {
+  transform: scale(0.95);
+}
+
+/* Card Hover Effects */
+.card-hover {
+  transition: border-color 200ms ease, background-color 200ms ease;
+}
+
+.card-hover:hover {
+  @apply border-primary/50;
+}
+
+/* Smooth Transitions - Never use transition-all */
+.transition-colors {
+  transition-property: color, background-color, border-color;
+  transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+  transition-duration: 200ms;
+}
+
+.transition-transform {
+  transition-property: transform;
+  transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+  transition-duration: 200ms;
+}
+
+/* Fade In Animation */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(16px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-fade-in {
+  animation: fadeIn 400ms ease-out forwards;
+}
+
+/* Staggered Animation */
+.animate-stagger-1 {
+  animation-delay: 100ms;
+}
+
+.animate-stagger-2 {
+  animation-delay: 200ms;
+}
+
+.animate-stagger-3 {
+  animation-delay: 300ms;
+}
+
+/* Loading Spinner */
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.animate-spin {
+  animation: spin 1s linear infinite;
+}
+
+/* Sidebar Transitions */
+.sidebar-enter {
+  transform: translateX(-100%);
+}
+
+.sidebar-enter-active {
+  transform: translateX(0);
+  transition: transform 300ms ease-out;
+}
+
+/* Logo Styles */
+.logo {
+  font-family: 'Outfit', sans-serif;
+  font-weight: 700;
+  font-size: 1.5rem;
+  letter-spacing: -0.02em;
+}
+
+/* Bento Grid Layout */
+.bento-grid {
+  display: grid;
+  gap: 1.5rem;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+}
+
+@media (min-width: 768px) {
+  .bento-grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+@media (min-width: 1024px) {
+  .bento-grid {
+    grid-template-columns: repeat(4, 1fr);
+  }
+}
+
+/* Dense Data Tables */
+.data-table {
+  font-variant-numeric: tabular-nums;
+}
+
+.data-table th {
+  @apply font-medium text-sm text-muted-foreground;
+}
+
+.data-table td {
+  @apply text-sm;
+}
+
+/* Status Badges */
+.badge {
+  @apply inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium;
+}
+
+.badge-success {
+  @apply bg-success/10 text-success border border-success/20;
+}
+
+.badge-warning {
+  @apply bg-warning/10 text-warning border border-warning/20;
+}
+
+.badge-error {
+  @apply bg-destructive/10 text-destructive border border-destructive/20;
+}
+
+.badge-info {
+  @apply bg-primary/10 text-primary border border-primary/20;
 }

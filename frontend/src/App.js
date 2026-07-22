@@ -1,54 +1,84 @@
-import { useEffect } from "react";
-import "@/App.css";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
-import axios from "axios";
-import { HOME } from "@/constants/testIds";
+import React from 'react';
+import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
+import { AuthProvider } from './context/AuthContext';
+import { ProtectedRoute } from './components/ProtectedRoute';
+import { AuthCallback } from './components/AuthCallback';
+import { Login } from './pages/Login';
+import { Register } from './pages/Register';
+import { Dashboard } from './pages/Dashboard';
+import { CRM } from './pages/CRM';
+import { Projects } from './pages/Projects';
+import './App.css';
 
-const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
-const API = `${BACKEND_URL}/api`;
-
-const Home = () => {
-  const helloWorldApi = async () => {
-    try {
-      const response = await axios.get(`${API}/`);
-      console.log(response.data.message);
-    } catch (e) {
-      console.error(e, `errored out requesting / api`);
-    }
-  };
-
-  useEffect(() => {
-    helloWorldApi();
-  }, []);
-
+// Placeholder pages for other modules
+const PlaceholderPage = ({ title }) => {
+  const { MainLayout } = require('./components/MainLayout');
   return (
-    <div>
-      <header className="App-header">
-        <a
-          data-testid={HOME.emergentLink}
-          className="App-link"
-          href="https://emergent.sh"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <img src="https://avatars.githubusercontent.com/in/1201222?s=120&u=2686cf91179bbafbc7a71bfbc43004cf9ae1acea&v=4" />
-        </a>
-        <p className="mt-5">Building something incredible ~!</p>
-      </header>
-    </div>
+    <MainLayout>
+      <div className="flex h-full items-center justify-center">
+        <div className="text-center">
+          <h1 className="text-4xl font-bold text-foreground">{title}</h1>
+          <p className="mt-4 text-muted-foreground">This module is under development</p>
+        </div>
+      </div>
+    </MainLayout>
   );
 };
 
+const Documents = () => <PlaceholderPage title="Documents" />;
+const HR = () => <PlaceholderPage title="HR Management" />;
+const Finance = () => <PlaceholderPage title="Finance" />;
+const Calendar = () => <PlaceholderPage title="Calendar" />;
+const Messages = () => <PlaceholderPage title="Messages" />;
+const Analytics = () => <PlaceholderPage title="Analytics" />;
+const AI = () => <PlaceholderPage title="AI Assistant" />;
+const Support = () => <PlaceholderPage title="Customer Support" />;
+const Admin = () => <PlaceholderPage title="Admin Portal" />;
+
+function AppRouter() {
+  const location = useLocation();
+  
+  // Check URL fragment for session_id during render (NOT in useEffect)
+  // This synchronous check prevents race conditions
+  if (location.hash?.includes('session_id=')) {
+    return <AuthCallback />;
+  }
+
+  return (
+    <Routes>
+      {/* Public Routes */}
+      <Route path="/login" element={<Login />} />
+      <Route path="/register" element={<Register />} />
+      
+      {/* Protected Routes */}
+      <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
+      <Route path="/crm/*" element={<ProtectedRoute><CRM /></ProtectedRoute>} />
+      <Route path="/projects/*" element={<ProtectedRoute><Projects /></ProtectedRoute>} />
+      <Route path="/documents/*" element={<ProtectedRoute><Documents /></ProtectedRoute>} />
+      <Route path="/hr/*" element={<ProtectedRoute><HR /></ProtectedRoute>} />
+      <Route path="/finance/*" element={<ProtectedRoute><Finance /></ProtectedRoute>} />
+      <Route path="/calendar" element={<ProtectedRoute><Calendar /></ProtectedRoute>} />
+      <Route path="/messages" element={<ProtectedRoute><Messages /></ProtectedRoute>} />
+      <Route path="/analytics" element={<ProtectedRoute><Analytics /></ProtectedRoute>} />
+      <Route path="/ai" element={<ProtectedRoute><AI /></ProtectedRoute>} />
+      <Route path="/support/*" element={<ProtectedRoute><Support /></ProtectedRoute>} />
+      <Route path="/admin/*" element={<ProtectedRoute><Admin /></ProtectedRoute>} />
+      
+      {/* Redirect root to dashboard */}
+      <Route path="/" element={<Navigate to="/dashboard" replace />} />
+      <Route path="*" element={<Navigate to="/dashboard" replace />} />
+    </Routes>
+  );
+}
+
 function App() {
   return (
-    <div className="App">
-      <BrowserRouter>
-        <Routes>
-          <Route path="/" element={<Home />}>
-            <Route index element={<Home />} />
-          </Route>
-        </Routes>
-      </BrowserRouter>
+    <div className="App dark">
+      <AuthProvider>
+        <BrowserRouter>
+          <AppRouter />
+        </BrowserRouter>
+      </AuthProvider>
     </div>
   );
 }
