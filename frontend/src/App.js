@@ -18,6 +18,9 @@ import { Admin } from './pages/Admin';
 import { DesignStudio } from './pages/DesignStudio';
 import { Messages } from './pages/Messages';
 import { Support } from './pages/Support';
+import { FounderOffice } from './pages/FounderOffice';
+import { WebsiteBuilder } from './pages/WebsiteBuilder';
+import { ClientPortal } from './pages/ClientPortal';
 import './App.css';
 
 function AppRouter() {
@@ -49,6 +52,9 @@ function AppRouter() {
       <Route path="/support/*" element={<ProtectedRoute><Support /></ProtectedRoute>} />
       <Route path="/admin/*" element={<ProtectedRoute><Admin /></ProtectedRoute>} />
       <Route path="/design-studio" element={<ProtectedRoute><DesignStudio /></ProtectedRoute>} />
+      <Route path="/founder-office" element={<ProtectedRoute><FounderOffice /></ProtectedRoute>} />
+      <Route path="/website-builder" element={<ProtectedRoute><WebsiteBuilder /></ProtectedRoute>} />
+      <Route path="/client-portal" element={<ProtectedRoute><ClientPortal /></ProtectedRoute>} />
       
       {/* Redirect root to dashboard */}
       <Route path="/" element={<Navigate to="/dashboard" replace />} />

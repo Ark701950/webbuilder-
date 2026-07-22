@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { MainLayout } from '../components/MainLayout';
 import { apiClient } from '../utils/api';
 import { PageHeader, StatCard, EmptyState, Modal, Input, Textarea, Button, Badge } from '../components/ui-kit';
+import { RichTextEditor } from '../components/RichTextEditor';
 import { FileText, Upload, Plus, Search, File, Download, Trash2 } from 'lucide-react';
 
 export const Documents = () => {
@@ -147,7 +148,15 @@ export const Documents = () => {
           <form onSubmit={handleCreateDoc} className="mt-6 space-y-4">
             <Input label="Title" required value={docForm.title} onChange={(e) => setDocForm({ ...docForm, title: e.target.value })} data-testid="doc-title-input" />
             <Input label="Description" value={docForm.description} onChange={(e) => setDocForm({ ...docForm, description: e.target.value })} data-testid="doc-description-input" />
-            <Textarea label="Content" rows={8} value={docForm.content} onChange={(e) => setDocForm({ ...docForm, content: e.target.value })} data-testid="doc-content-input" placeholder="Start typing your document..." />
+            <div>
+              <label className="mb-1.5 block text-sm font-medium text-foreground">Content</label>
+              <RichTextEditor
+                value={docForm.content}
+                onChange={(html) => setDocForm({ ...docForm, content: html })}
+                placeholder="Start typing your document..."
+                testId="doc-content-editor"
+              />
+            </div>
             <div className="flex gap-3 pt-4">
               <Button type="button" variant="secondary" className="flex-1" onClick={() => setShowDocModal(false)}>Cancel</Button>
               <Button type="submit" disabled={submitting} className="flex-1" data-testid="submit-document-button">

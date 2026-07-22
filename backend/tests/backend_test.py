@@ -278,6 +278,144 @@ class TestAI:
         assert "conversation_id" in d
 
 
+# ---------- Messages/Channels ----------
+class TestMessages:
+    def test_create_channel_and_send_message(self, auth_headers):
+        ch = {"name": f"TEST_ch_{uuid.uuid4().hex[:6]}"}
+        r = requests.post(f"{API}/channels", json=ch, headers=auth_headers, timeout=15)
+        assert r.status_code == 200, r.text
+        channel = r.json()["channel"]
+        cid = channel["channel_id"]
+
+        r2 = requests.get(f"{API}/channels", headers=auth_headers, timeout=15)
+        assert r2.status_code == 200
+        assert any(c["channel_id"] == cid for c in r2.json()["channels"])
+
+        # Send message
+        msg = {"content": "hello world", "channel_id": cid}
+        r3 = requests.post(f"{API}/messages", json=msg, headers=auth_headers, timeout=15)
+        assert r3.status_code == 200, r3.text
+
+        r4 = requests.get(f"{API}/messages", params={"channel_id": cid}, headers=auth_headers, timeout=15)
+        assert r4.status_code == 200
+        msgs = r4.json()["messages"]
+        assert any(m["content"] == "hello world" for m in msgs)
+
+
+# ---------- Support ----------
+class TestSupport:
+    def test_ticket_crud(self, auth_headers):
+        payload = {"title": f"TEST_ticket_{uuid.uuid4().hex[:6]}", "description": "desc", "priority": "high"}
+        r = requests.post(f"{API}/tickets", json=payload, headers=auth_headers, timeout=15)
+        assert r.status_code == 200, r.text
+        t = r.json()["ticket"]
+        tid = t["ticket_id"]
+        assert t["priority"] == "high"
+
+        r2 = requests.put(f"{API}/tickets/{tid}", json={"status": "in_progress", "priority": "critical"}, headers=auth_headers, timeout=15)
+        assert r2.status_code == 200
+
+        r3 = requests.get(f"{API}/tickets", headers=auth_headers, timeout=15)
+        assert r3.status_code == 200
+        updated = next((x for x in r3.json()["tickets"] if x["ticket_id"] == tid), None)
+        assert updated is not None
+        assert updated["status"] == "in_progress"
+        assert updated["priority"] == "critical"
+
+    def test_kb_article(self, auth_headers):
+        payload = {"title": f"TEST_kb_{uuid.uuid4().hex[:6]}", "content": "how to..."}
+        r = requests.post(f"{API}/kb-articles", json=payload, headers=auth_headers, timeout=15)
+        assert r.status_code == 200, r.text
+        aid = r.json()["article"]["article_id"]
+        r2 = requests.get(f"{API}/kb-articles", headers=auth_headers, timeout=15)
+        assert r2.status_code == 200
+        assert any(a["article_id"] == aid for a in r2.json()["articles"])
+
+
+# ---------- Founder Office ----------
+class TestFounderOffice:
+    def test_overview(self, auth_headers):
+        r = requests.get(f"{API}/founder/overview", headers=auth_headers, timeout=15)
+        assert r.status_code == 200, r.text
+        d = r.json()
+        for k in ["company_health_score", "total_clients", "total_projects", "net_worth", "valuation_estimate"]:
+            assert k in d
+
+    def test_strategy(self, auth_headers):
+        payload = {"title": f"TEST_strat_{uuid.uuid4().hex[:6]}", "category": "growth"}
+        r = requests.post(f"{API}/strategy", json=payload, headers=auth_headers, timeout=15)
+        assert r.status_code == 200, r.text
+        sid = r.json()["strategy"]["strategy_id"]
+        r2 = requests.get(f"{API}/strategy", headers=auth_headers, timeout=15)
+        assert r2.status_code == 200
+        assert any(s["strategy_id"] == sid for s in r2.json()["strategy_items"])
+
+    def test_checklist_full_flow(self, auth_headers):
+        payload = {"title": f"TEST_task_{uuid.uuid4().hex[:6]}"}
+        r = requests.post(f"{API}/checklist", json=payload, headers=auth_headers, timeout=15)
+        assert r.status_code == 200, r.text
+        iid = r.json()["item"]["item_id"]
+
+        r2 = requests.put(f"{API}/checklist/{iid}", json={"completed": True}, headers=auth_headers, timeout=15)
+        assert r2.status_code == 200
+
+        r3 = requests.get(f"{API}/checklist", headers=auth_headers, timeout=15)
+        assert r3.status_code == 200
+        item = next((x for x in r3.json()["items"] if x["item_id"] == iid), None)
+        assert item is not None
+        assert item["completed"] is True
+
+        r4 = requests.delete(f"{API}/checklist/{iid}", headers=auth_headers, timeout=15)
+        assert r4.status_code == 200
+
+        r5 = requests.get(f"{API}/checklist", headers=auth_headers, timeout=15)
+        assert not any(x["item_id"] == iid for x in r5.json()["items"])
+
+
+# ---------- Website Builder ----------
+class TestWebsiteBuilder:
+    def test_website_pages_publish(self, auth_headers):
+        payload = {"name": f"TEST_site_{uuid.uuid4().hex[:6]}", "template": "business"}
+        r = requests.post(f"{API}/websites", json=payload, headers=auth_headers, timeout=15)
+        assert r.status_code == 200, r.text
+        wid = r.json()["website"]["website_id"]
+
+        r2 = requests.get(f"{API}/websites/{wid}/pages", headers=auth_headers, timeout=15)
+        assert r2.status_code == 200
+        pages = r2.json()["pages"]
+        assert len(pages) >= 1  # auto-created home
+        home = next((p for p in pages if p.get("is_homepage")), pages[0])
+        pid = home["page_id"]
+
+        # Update page content
+        r3 = requests.put(f"{API}/websites/{wid}/pages/{pid}", json={"content": "<h1>Updated</h1>"}, headers=auth_headers, timeout=15)
+        assert r3.status_code == 200
+
+        r4 = requests.get(f"{API}/websites/{wid}/pages", headers=auth_headers, timeout=15)
+        updated = next(p for p in r4.json()["pages"] if p["page_id"] == pid)
+        assert updated["content"] == "<h1>Updated</h1>"
+
+        # Publish
+        r5 = requests.put(f"{API}/websites/{wid}/publish", headers=auth_headers, timeout=15)
+        assert r5.status_code == 200
+
+        r6 = requests.get(f"{API}/websites", headers=auth_headers, timeout=15)
+        w = next(x for x in r6.json()["websites"] if x["website_id"] == wid)
+        assert w["status"] == "published"
+
+
+# ---------- Client Portal ----------
+class TestClientPortal:
+    def test_overview(self, auth_headers):
+        r = requests.get(f"{API}/client-portal/overview", headers=auth_headers, timeout=15)
+        assert r.status_code == 200, r.text
+        d = r.json()
+        for k in ["projects", "invoices", "tickets", "documents", "stats"]:
+            assert k in d
+        for k in ["active_projects", "pending_invoices", "open_tickets"]:
+            assert k in d["stats"]
+
+
 # ---------- Logout ----------
 class TestLogout:
     def test_logout(self, auth_headers):

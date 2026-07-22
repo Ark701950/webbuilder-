@@ -19,7 +19,8 @@ from models import (
     Project, Task, Document, File as FileModel,
     Employee, Department, Attendance, Leave,
     Transaction, Invoice, Message, Event, Ticket,
-    AIConversation, Workspace, Notification
+    AIConversation, Workspace, Notification,
+    KBArticle, Channel, StrategyItem, ChecklistItem, Website, WebPage
 )
 from auth import (
     hash_password, verify_password, create_jwt_token,
@@ -845,6 +846,293 @@ async def delete_conversation(conversation_id: str, user: User = Depends(get_cur
     """Delete conversation"""
     await db.ai_conversations.delete_one({"conversation_id": conversation_id, "user_id": user.user_id})
     return {"message": "Conversation deleted"}
+
+# ==================== MESSAGES & CHANNELS ====================
+
+@api_router.post("/channels")
+async def create_channel(ch_data: Channel, user: User = Depends(get_current_user)):
+    """Create channel"""
+    ch_data.organization_id = user.organization_id or "default"
+    ch_data.created_by = user.user_id
+    if user.user_id not in ch_data.members:
+        ch_data.members = list(set(ch_data.members + [user.user_id]))
+    await db.channels.insert_one(ch_data.model_dump())
+    return {"message": "Channel created", "channel": ch_data}
+
+@api_router.get("/channels")
+async def list_channels(user: User = Depends(get_current_user)):
+    """List channels user is a member of"""
+    channels = await db.channels.find(
+        {
+            "organization_id": user.organization_id or "default",
+            "$or": [{"channel_type": "public"}, {"members": user.user_id}]
+        },
+        {"_id": 0}
+    ).to_list(1000)
+    return {"channels": channels}
+
+@api_router.post("/messages")
+async def send_message(msg_data: Message, user: User = Depends(get_current_user)):
+    """Send message to channel or DM"""
+    msg_data.organization_id = user.organization_id or "default"
+    msg_data.sender_id = user.user_id
+    await db.messages.insert_one(msg_data.model_dump())
+    return {"message": "Sent", "data": msg_data}
+
+@api_router.get("/messages")
+async def list_messages(channel_id: Optional[str] = None, receiver_id: Optional[str] = None, user: User = Depends(get_current_user)):
+    """List messages in a channel or DM thread"""
+    query = {"organization_id": user.organization_id or "default"}
+    if channel_id:
+        query["channel_id"] = channel_id
+    elif receiver_id:
+        query["$or"] = [
+            {"sender_id": user.user_id, "receiver_id": receiver_id},
+            {"sender_id": receiver_id, "receiver_id": user.user_id}
+        ]
+    else:
+        raise HTTPException(status_code=400, detail="channel_id or receiver_id required")
+    
+    messages = await db.messages.find(query, {"_id": 0}).sort("created_at", 1).to_list(500)
+    return {"messages": messages}
+
+# ==================== CUSTOMER SUPPORT ====================
+
+@api_router.post("/tickets")
+async def create_ticket(t_data: Ticket, user: User = Depends(get_current_user)):
+    """Create support ticket"""
+    t_data.organization_id = user.organization_id or "default"
+    await db.tickets.insert_one(t_data.model_dump())
+    return {"message": "Ticket created", "ticket": t_data}
+
+@api_router.get("/tickets")
+async def list_tickets(user: User = Depends(get_current_user)):
+    """List tickets"""
+    tickets = await db.tickets.find(
+        {"organization_id": user.organization_id or "default"},
+        {"_id": 0}
+    ).sort("created_at", -1).to_list(1000)
+    return {"tickets": tickets}
+
+@api_router.put("/tickets/{ticket_id}")
+async def update_ticket(ticket_id: str, request: Request, user: User = Depends(get_current_user)):
+    """Update ticket status/priority/assignee"""
+    body = await request.json()
+    allowed = ['status', 'priority', 'assigned_agent_id', 'category', 'tags']
+    updates = {k: v for k, v in body.items() if k in allowed}
+    updates['updated_at'] = datetime.now(timezone.utc).isoformat()
+    result = await db.tickets.update_one({"ticket_id": ticket_id}, {"$set": updates})
+    if result.matched_count == 0:
+        raise HTTPException(status_code=404, detail="Ticket not found")
+    return {"message": "Ticket updated"}
+
+@api_router.post("/kb-articles")
+async def create_kb_article(a_data: KBArticle, user: User = Depends(get_current_user)):
+    """Create knowledge base article"""
+    a_data.organization_id = user.organization_id or "default"
+    a_data.author_id = user.user_id
+    await db.kb_articles.insert_one(a_data.model_dump())
+    return {"message": "Article created", "article": a_data}
+
+@api_router.get("/kb-articles")
+async def list_kb_articles(user: User = Depends(get_current_user)):
+    """List knowledge base articles"""
+    articles = await db.kb_articles.find(
+        {"organization_id": user.organization_id or "default"},
+        {"_id": 0}
+    ).sort("created_at", -1).to_list(1000)
+    return {"articles": articles}
+
+# ==================== FOUNDER OFFICE ====================
+
+@api_router.post("/strategy")
+async def create_strategy(s_data: StrategyItem, user: User = Depends(get_current_user)):
+    """Create strategy item"""
+    if user.role not in ['owner', 'admin']:
+        raise HTTPException(status_code=403, detail="Founder access required")
+    s_data.organization_id = user.organization_id or "default"
+    s_data.owner_id = user.user_id
+    await db.strategy_items.insert_one(s_data.model_dump())
+    return {"message": "Strategy created", "strategy": s_data}
+
+@api_router.get("/strategy")
+async def list_strategy(user: User = Depends(get_current_user)):
+    """List strategy items"""
+    if user.role not in ['owner', 'admin']:
+        raise HTTPException(status_code=403, detail="Founder access required")
+    items = await db.strategy_items.find(
+        {"organization_id": user.organization_id or "default"},
+        {"_id": 0}
+    ).sort("created_at", -1).to_list(1000)
+    return {"strategy_items": items}
+
+@api_router.post("/checklist")
+async def create_checklist_item(c_data: ChecklistItem, user: User = Depends(get_current_user)):
+    """Create checklist item"""
+    c_data.organization_id = user.organization_id or "default"
+    c_data.owner_id = user.user_id
+    await db.checklist_items.insert_one(c_data.model_dump())
+    return {"message": "Item created", "item": c_data}
+
+@api_router.get("/checklist")
+async def list_checklist(user: User = Depends(get_current_user)):
+    """List user's checklist"""
+    items = await db.checklist_items.find(
+        {"owner_id": user.user_id},
+        {"_id": 0}
+    ).sort("created_at", -1).to_list(1000)
+    return {"items": items}
+
+@api_router.put("/checklist/{item_id}")
+async def toggle_checklist(item_id: str, request: Request, user: User = Depends(get_current_user)):
+    """Toggle/update checklist item"""
+    body = await request.json()
+    updates = {"completed": body.get('completed', False), "updated_at": datetime.now(timezone.utc).isoformat()}
+    if 'title' in body:
+        updates['title'] = body['title']
+    result = await db.checklist_items.update_one(
+        {"item_id": item_id, "owner_id": user.user_id},
+        {"$set": updates}
+    )
+    if result.matched_count == 0:
+        raise HTTPException(status_code=404, detail="Item not found")
+    return {"message": "Item updated"}
+
+@api_router.delete("/checklist/{item_id}")
+async def delete_checklist(item_id: str, user: User = Depends(get_current_user)):
+    """Delete checklist item"""
+    await db.checklist_items.delete_one({"item_id": item_id, "owner_id": user.user_id})
+    return {"message": "Item deleted"}
+
+@api_router.get("/founder/overview")
+async def founder_overview(user: User = Depends(get_current_user)):
+    """Founder Office executive overview"""
+    if user.role not in ['owner', 'admin']:
+        raise HTTPException(status_code=403, detail="Founder access required")
+    
+    org = user.organization_id or "default"
+    org_filter = {"organization_id": org}
+    
+    # Aggregate metrics
+    total_clients = await db.clients.count_documents(org_filter)
+    total_projects = await db.projects.count_documents(org_filter)
+    active_projects = await db.projects.count_documents({**org_filter, "status": "active"})
+    total_employees = await db.employees.count_documents(org_filter)
+    open_tickets = await db.tickets.count_documents({**org_filter, "status": {"$in": ["open", "in_progress"]}})
+    
+    # Financial
+    income_txns = await db.transactions.find({**org_filter, "type": "income"}, {"_id": 0, "amount": 1}).to_list(10000)
+    expense_txns = await db.transactions.find({**org_filter, "type": "expense"}, {"_id": 0, "amount": 1}).to_list(10000)
+    total_income = sum(t.get('amount', 0) for t in income_txns)
+    total_expense = sum(t.get('amount', 0) for t in expense_txns)
+    net_worth = total_income - total_expense
+    
+    return {
+        "company_health_score": min(100, 40 + (10 if total_clients else 0) + (15 if active_projects else 0) + (15 if total_employees else 0) + (10 if net_worth > 0 else 0)),
+        "total_clients": total_clients,
+        "total_projects": total_projects,
+        "active_projects": active_projects,
+        "total_employees": total_employees,
+        "open_tickets": open_tickets,
+        "total_income": total_income,
+        "total_expense": total_expense,
+        "net_worth": net_worth,
+        "valuation_estimate": net_worth * 3 + total_clients * 5000  # Simple heuristic
+    }
+
+# ==================== WEBSITE BUILDER ====================
+
+@api_router.post("/websites")
+async def create_website(w_data: Website, user: User = Depends(get_current_user)):
+    """Create website"""
+    w_data.organization_id = user.organization_id or "default"
+    w_data.owner_id = user.user_id
+    await db.websites.insert_one(w_data.model_dump())
+    # Create default homepage
+    home = WebPage(
+        website_id=w_data.website_id,
+        name="Home",
+        slug="home",
+        is_homepage=True,
+        content='<h1>Welcome to your new website</h1><p>Edit this page to get started.</p>',
+        organization_id=w_data.organization_id
+    )
+    await db.web_pages.insert_one(home.model_dump())
+    return {"message": "Website created", "website": w_data}
+
+@api_router.get("/websites")
+async def list_websites(user: User = Depends(get_current_user)):
+    """List websites"""
+    websites = await db.websites.find(
+        {"organization_id": user.organization_id or "default"},
+        {"_id": 0}
+    ).to_list(1000)
+    return {"websites": websites}
+
+@api_router.get("/websites/{website_id}/pages")
+async def list_pages(website_id: str, user: User = Depends(get_current_user)):
+    """List pages of a website"""
+    pages = await db.web_pages.find(
+        {"website_id": website_id},
+        {"_id": 0}
+    ).to_list(1000)
+    return {"pages": pages}
+
+@api_router.post("/websites/{website_id}/pages")
+async def create_page(website_id: str, p_data: WebPage, user: User = Depends(get_current_user)):
+    """Create page in website"""
+    p_data.website_id = website_id
+    p_data.organization_id = user.organization_id or "default"
+    await db.web_pages.insert_one(p_data.model_dump())
+    return {"message": "Page created", "page": p_data}
+
+@api_router.put("/websites/{website_id}/pages/{page_id}")
+async def update_page(website_id: str, page_id: str, request: Request, user: User = Depends(get_current_user)):
+    """Update page content"""
+    body = await request.json()
+    allowed = ['name', 'slug', 'content', 'is_homepage']
+    updates = {k: v for k, v in body.items() if k in allowed}
+    updates['updated_at'] = datetime.now(timezone.utc).isoformat()
+    result = await db.web_pages.update_one({"page_id": page_id, "website_id": website_id}, {"$set": updates})
+    if result.matched_count == 0:
+        raise HTTPException(status_code=404, detail="Page not found")
+    return {"message": "Page updated"}
+
+@api_router.put("/websites/{website_id}/publish")
+async def publish_website(website_id: str, user: User = Depends(get_current_user)):
+    """Publish website"""
+    await db.websites.update_one(
+        {"website_id": website_id},
+        {"$set": {"status": "published", "updated_at": datetime.now(timezone.utc).isoformat()}}
+    )
+    return {"message": "Website published"}
+
+# ==================== CLIENT PORTAL ====================
+
+@api_router.get("/client-portal/overview")
+async def client_portal_overview(user: User = Depends(get_current_user)):
+    """Client portal - shows projects, invoices, tickets for the client"""
+    # For MVP: show all projects/invoices/tickets user has access to
+    # In production: filter by client_id linked to user
+    org = user.organization_id or "default"
+    org_filter = {"organization_id": org}
+    
+    projects = await db.projects.find(org_filter, {"_id": 0}).to_list(100)
+    invoices = await db.invoices.find(org_filter, {"_id": 0}).to_list(100)
+    tickets = await db.tickets.find(org_filter, {"_id": 0}).to_list(100)
+    documents = await db.documents.find(org_filter, {"_id": 0}).to_list(100)
+    
+    return {
+        "projects": projects[:10],
+        "invoices": invoices[:10],
+        "tickets": tickets[:10],
+        "documents": documents[:10],
+        "stats": {
+            "active_projects": len([p for p in projects if p.get('status') == 'active']),
+            "pending_invoices": len([i for i in invoices if i.get('payment_status') == 'pending']),
+            "open_tickets": len([t for t in tickets if t.get('status') in ['open', 'in_progress']]),
+        }
+    }
 
 # Include router
 app.include_router(api_router)

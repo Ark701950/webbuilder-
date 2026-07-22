@@ -261,7 +261,7 @@ class Invoice(BaseDocument):
 # Communication Models
 class Message(BaseDocument):
     message_id: str = Field(default_factory=lambda: f"msg_{uuid.uuid4().hex[:12]}")
-    sender_id: str
+    sender_id: Optional[str] = None
     receiver_id: Optional[str] = None
     channel_id: Optional[str] = None
     content: str
@@ -293,12 +293,76 @@ class Ticket(BaseDocument):
     ticket_id: str = Field(default_factory=lambda: f"ticket_{uuid.uuid4().hex[:12]}")
     title: str
     description: str
-    client_id: str
+    client_id: Optional[str] = None
     category: Optional[str] = None
     priority: str = "medium"  # low, medium, high, critical
     status: str = "open"  # open, pending, in_progress, resolved, closed
     assigned_agent_id: Optional[str] = None
     tags: List[str] = Field(default_factory=list)
+    organization_id: Optional[str] = None
+
+class KBArticle(BaseDocument):
+    article_id: str = Field(default_factory=lambda: f"kb_{uuid.uuid4().hex[:12]}")
+    title: str
+    content: str
+    category: str = "general"
+    tags: List[str] = Field(default_factory=list)
+    author_id: Optional[str] = None
+    views: int = 0
+    status: str = "published"
+    organization_id: Optional[str] = None
+
+# Communication Channels
+class Channel(BaseDocument):
+    channel_id: str = Field(default_factory=lambda: f"ch_{uuid.uuid4().hex[:12]}")
+    name: str
+    description: Optional[str] = None
+    channel_type: str = "public"  # public, private, direct
+    members: List[str] = Field(default_factory=list)
+    created_by: Optional[str] = None
+    organization_id: Optional[str] = None
+
+# Founder Office Models
+class StrategyItem(BaseDocument):
+    strategy_id: str = Field(default_factory=lambda: f"strat_{uuid.uuid4().hex[:12]}")
+    title: str
+    description: Optional[str] = None
+    category: str = "general"  # general, growth, revenue, product, team
+    status: str = "planning"  # planning, in_progress, achieved, paused
+    priority: str = "medium"
+    target_date: Optional[str] = None
+    owner_id: Optional[str] = None
+    organization_id: Optional[str] = None
+
+class ChecklistItem(BaseDocument):
+    item_id: str = Field(default_factory=lambda: f"chk_{uuid.uuid4().hex[:12]}")
+    title: str
+    completed: bool = False
+    priority: str = "medium"
+    due_date: Optional[str] = None
+    owner_id: Optional[str] = None
+    organization_id: Optional[str] = None
+
+# Website Builder Models
+class Website(BaseDocument):
+    website_id: str = Field(default_factory=lambda: f"web_{uuid.uuid4().hex[:12]}")
+    name: str
+    domain: Optional[str] = None
+    client_id: Optional[str] = None
+    project_id: Optional[str] = None
+    status: str = "draft"  # draft, published, archived
+    template: str = "blank"
+    theme: dict = Field(default_factory=dict)
+    owner_id: Optional[str] = None
+    organization_id: Optional[str] = None
+
+class WebPage(BaseDocument):
+    page_id: str = Field(default_factory=lambda: f"page_{uuid.uuid4().hex[:12]}")
+    website_id: str
+    name: str
+    slug: str
+    content: str = ""  # JSON blocks or HTML
+    is_homepage: bool = False
     organization_id: Optional[str] = None
 
 # AI Chat Models

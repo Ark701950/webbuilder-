@@ -1,6 +1,6 @@
 import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { Home, Users, Briefcase, FolderOpen, Calendar, MessageSquare, BarChart3, Bot, Settings, LayoutDashboard, Building2, FileText, DollarSign, HeadphonesIcon, Palette } from 'lucide-react';
+import { Home, Users, Briefcase, FolderOpen, Calendar, MessageSquare, BarChart3, Bot, Settings, LayoutDashboard, Building2, FileText, DollarSign, HeadphonesIcon, Palette, Crown, Globe, ExternalLink } from 'lucide-react';
 
 const navigation = [
   { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard, testId: 'nav-dashboard' },
@@ -14,9 +14,12 @@ const navigation = [
   { name: 'Analytics', href: '/analytics', icon: BarChart3, testId: 'nav-analytics' },
   { name: 'AI Assistant', href: '/ai', icon: Bot, testId: 'nav-ai' },
   { name: 'Support', href: '/support', icon: HeadphonesIcon, testId: 'nav-support' },
+  { name: 'Websites', href: '/website-builder', icon: Globe, testId: 'nav-website-builder' },
+  { name: 'Client Portal', href: '/client-portal', icon: ExternalLink, testId: 'nav-client-portal' },
 ];
 
 const bottomNavigation = [
+  { name: 'Founder Office', href: '/founder-office', icon: Crown, testId: 'nav-founder-office' },
   { name: 'Design Studio', href: '/design-studio', icon: Palette, testId: 'nav-design-studio' },
   { name: 'Admin Portal', href: '/admin', icon: Settings, testId: 'nav-admin' },
 ];
