@@ -1088,39 +1088,63 @@ async def create_page(website_id: str, p_data: WebPage, user: User = Depends(get
 
 @api_router.put("/websites/{website_id}/pages/{page_id}")
 async def update_page(website_id: str, page_id: str, request: Request, user: User = Depends(get_current_user)):
-    """Update page content"""
+    """Update page content (scoped to user's org)"""
     body = await request.json()
     allowed = ['name', 'slug', 'content', 'is_homepage']
     updates = {k: v for k, v in body.items() if k in allowed}
     updates['updated_at'] = datetime.now(timezone.utc).isoformat()
-    result = await db.web_pages.update_one({"page_id": page_id, "website_id": website_id}, {"$set": updates})
+    org = user.organization_id or "default"
+    result = await db.web_pages.update_one(
+        {"page_id": page_id, "website_id": website_id, "organization_id": org},
+        {"$set": updates}
+    )
     if result.matched_count == 0:
         raise HTTPException(status_code=404, detail="Page not found")
     return {"message": "Page updated"}
 
 @api_router.put("/websites/{website_id}/publish")
 async def publish_website(website_id: str, user: User = Depends(get_current_user)):
-    """Publish website"""
-    await db.websites.update_one(
-        {"website_id": website_id},
+    """Publish website (scoped to user's org)"""
+    org = user.organization_id or "default"
+    result = await db.websites.update_one(
+        {"website_id": website_id, "organization_id": org},
         {"$set": {"status": "published", "updated_at": datetime.now(timezone.utc).isoformat()}}
     )
+    if result.matched_count == 0:
+        raise HTTPException(status_code=404, detail="Website not found")
     return {"message": "Website published"}
 
 # ==================== CLIENT PORTAL ====================
 
 @api_router.get("/client-portal/overview")
 async def client_portal_overview(user: User = Depends(get_current_user)):
-    """Client portal - shows projects, invoices, tickets for the client"""
-    # For MVP: show all projects/invoices/tickets user has access to
-    # In production: filter by client_id linked to user
+    """Client portal - shows projects/invoices/tickets/documents scoped to this user.
+    Owners/Admins see full org data; clients see only their linked records."""
     org = user.organization_id or "default"
     org_filter = {"organization_id": org}
     
-    projects = await db.projects.find(org_filter, {"_id": 0}).to_list(100)
-    invoices = await db.invoices.find(org_filter, {"_id": 0}).to_list(100)
-    tickets = await db.tickets.find(org_filter, {"_id": 0}).to_list(100)
-    documents = await db.documents.find(org_filter, {"_id": 0}).to_list(100)
+    if user.role in ['owner', 'admin']:
+        # Admins see everything in org
+        projects = await db.projects.find(org_filter, {"_id": 0}).to_list(100)
+        invoices = await db.invoices.find(org_filter, {"_id": 0}).to_list(100)
+        tickets = await db.tickets.find(org_filter, {"_id": 0}).to_list(100)
+        documents = await db.documents.find(org_filter, {"_id": 0}).to_list(100)
+    else:
+        # Regular users see only records where they are owner/member/assignee/client-linked
+        uid = user.user_id
+        projects = await db.projects.find({
+            **org_filter,
+            "$or": [{"owner_id": uid}, {"team_members": uid}, {"client_id": uid}]
+        }, {"_id": 0}).to_list(100)
+        invoices = await db.invoices.find({**org_filter, "client_id": uid}, {"_id": 0}).to_list(100)
+        tickets = await db.tickets.find({
+            **org_filter,
+            "$or": [{"client_id": uid}, {"assigned_agent_id": uid}]
+        }, {"_id": 0}).to_list(100)
+        documents = await db.documents.find({
+            **org_filter,
+            "$or": [{"owner_id": uid}, {"contributors": uid}, {"client_id": uid}]
+        }, {"_id": 0}).to_list(100)
     
     return {
         "projects": projects[:10],

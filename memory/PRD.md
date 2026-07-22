@@ -43,12 +43,14 @@ Build WebBuilder OS - a complete enterprise AI Business Operating System combini
 - Every module integrates with every other module
 - Modular, scalable, no isolated features
 
-## What's Been Implemented (Iterations 1-3)
+## What's Been Implemented (Iterations 1-4)
 ✅ **Foundation** (iter 1): Auth (JWT + Google OAuth), RBAC, MongoDB models, dark-first design system with Outfit/Manrope fonts, Sidebar+Header layout, Login/Register, Dashboard, CRM (Clients+Leads), Projects
 ✅ **AI + Modules** (iter 3): AI Assistant with GPT-5.2/Claude Sonnet 4.6 model switcher (streaming + non-streaming), conversation history sidebar, Documents (create + file upload), Admin Portal (users table, edit/suspend, roles tab, settings), HR (employees + departments + leaves), Finance (transactions + invoices + summary), Calendar (month grid + upcoming events), Analytics (Recharts: line/bar/pie + KPI cards), Design Studio (theme picker + font selector + logo upload + layout options)
+✅ **Full Business Suite** (iter 4): Messages (channels + real-time polling + DM support), Support (tickets + KB articles + SLA management), Founder Office (executive dashboard, strategy, checklist, AI insights via GPT-5.2), Website Builder (websites + pages + rich text editor + publish), Client Portal (scoped project/invoice/ticket/document access), Rich Text Editor component (contentEditable-based with bold/italic/headings/lists/links/quotes/code)
 ✅ **Reusable UI Kit**: PageHeader, StatCard, Modal, Input, Select, Textarea, Button, Badge, EmptyState (single source at `/components/ui-kit.js`)
 ✅ **Object Storage**: File upload/download working via Emergent Storage API
-✅ **Testing**: 21/21 backend pytest pass, 100% frontend E2E on all create flows including AI chat
+✅ **Security**: Client Portal now scopes data by role (owners see all, users see only their linked records); Website update/publish scoped to org
+✅ **Testing**: 29/29 backend pytest pass across 4 iterations, 100% frontend E2E on all module create flows including AI chat and rich text editing
 
 ## Prioritized Backlog
 
