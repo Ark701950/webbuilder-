@@ -156,6 +156,12 @@ async def register(data: RegisterRequest):
         "session_token": session_token
     }
 
+import re
+
+def _escape_regex(text: str) -> str:
+    """Escape regex special chars for safe MongoDB $regex use."""
+    return re.escape(text or "")
+
 @api_router.post("/auth/login")
 async def login(data: LoginRequest):
     """User login - accepts email OR username"""
@@ -163,12 +169,12 @@ async def login(data: LoginRequest):
     if not identifier:
         raise HTTPException(status_code=400, detail="Email or username required")
     
-    # Look up by email first, fall back to username (case-insensitive)
+    # Look up by email first, fall back to username (case-insensitive, safely escaped)
     user_doc = await db.users.find_one({"email": identifier}, {"_id": 0})
     if not user_doc:
-        # Case-insensitive username lookup
+        safe = _escape_regex(identifier)
         user_doc = await db.users.find_one(
-            {"username": {"$regex": f"^{identifier}$", "$options": "i"}},
+            {"username": {"$regex": f"^{safe}$", "$options": "i"}},
             {"_id": 0}
         )
     
@@ -873,9 +879,10 @@ async def admin_revoke_session(session_token_prefix: str, user: User = Depends(g
     if user.role not in ['owner', 'admin']:
         raise HTTPException(status_code=403, detail="Admin access required")
     
-    # Match session by token prefix
+    # Match session by token prefix (safely escaped)
+    safe_prefix = _escape_regex(session_token_prefix.replace('...', ''))
     result = await db.user_sessions.delete_many({
-        "session_token": {"$regex": f"^{session_token_prefix.replace('...', '')}"}
+        "session_token": {"$regex": f"^{safe_prefix}"}
     })
     return {"message": "Session revoked", "sessions_deleted": result.deleted_count}
 
