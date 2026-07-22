@@ -58,7 +58,7 @@ class Organization(BaseDocument):
     domain: Optional[str] = None
     address: Optional[str] = None
     industry: Optional[str] = None
-    owner_id: str
+    owner_id: Optional[str] = None
     members: List[str] = Field(default_factory=list)
     departments: List[str] = Field(default_factory=list)
     status: str = "active"
@@ -69,7 +69,7 @@ class Role(BaseDocument):
     name: str
     description: Optional[str] = None
     permissions: List[str] = Field(default_factory=list)
-    organization_id: str
+    organization_id: Optional[str] = None
     is_system: bool = False
 
 # CRM Models
@@ -87,7 +87,7 @@ class Client(BaseDocument):
     assigned_manager_id: Optional[str] = None
     tags: List[str] = Field(default_factory=list)
     notes: Optional[str] = None
-    organization_id: str
+    organization_id: Optional[str] = None
 
 class Lead(BaseDocument):
     lead_id: str = Field(default_factory=lambda: f"lead_{uuid.uuid4().hex[:12]}")
@@ -103,7 +103,7 @@ class Lead(BaseDocument):
     assigned_user_id: Optional[str] = None
     notes: Optional[str] = None
     follow_up_date: Optional[str] = None
-    organization_id: str
+    organization_id: Optional[str] = None
 
 class Deal(BaseDocument):
     deal_id: str = Field(default_factory=lambda: f"deal_{uuid.uuid4().hex[:12]}")
@@ -113,9 +113,9 @@ class Deal(BaseDocument):
     probability: int = 50
     expected_close_date: Optional[str] = None
     stage: str = "proposal"  # proposal, negotiation, closing, won, lost
-    owner_id: str
+    owner_id: Optional[str] = None
     notes: Optional[str] = None
-    organization_id: str
+    organization_id: Optional[str] = None
 
 # Project Management Models
 class Project(BaseDocument):
@@ -127,14 +127,14 @@ class Project(BaseDocument):
     category: Optional[str] = None
     status: str = "planning"  # planning, active, on_hold, review, completed, cancelled
     priority: str = "medium"  # low, medium, high
-    owner_id: str
+    owner_id: Optional[str] = None
     team_members: List[str] = Field(default_factory=list)
     start_date: Optional[str] = None
     deadline: Optional[str] = None
     budget: Optional[float] = None
     progress: int = 0
     tags: List[str] = Field(default_factory=list)
-    organization_id: str
+    organization_id: Optional[str] = None
 
 class Task(BaseDocument):
     task_id: str = Field(default_factory=lambda: f"task_{uuid.uuid4().hex[:12]}")
@@ -142,7 +142,7 @@ class Task(BaseDocument):
     description: Optional[str] = None
     project_id: str
     assignee_id: Optional[str] = None
-    reporter_id: str
+    reporter_id: Optional[str] = None
     priority: str = "medium"  # low, medium, high
     status: str = "todo"  # todo, in_progress, review, testing, completed, blocked
     labels: List[str] = Field(default_factory=list)
@@ -150,7 +150,7 @@ class Task(BaseDocument):
     start_date: Optional[str] = None
     estimated_time: Optional[int] = None  # in hours
     actual_time: Optional[int] = None
-    organization_id: str
+    organization_id: Optional[str] = None
 
 # Document & File Models
 class Document(BaseDocument):
@@ -162,12 +162,12 @@ class Document(BaseDocument):
     project_id: Optional[str] = None
     client_id: Optional[str] = None
     folder_id: Optional[str] = None
-    owner_id: str
+    owner_id: Optional[str] = None
     contributors: List[str] = Field(default_factory=list)
     version: int = 1
     status: str = "draft"  # draft, published, archived
     tags: List[str] = Field(default_factory=list)
-    organization_id: str
+    organization_id: Optional[str] = None
 
 class File(BaseDocument):
     file_id: str = Field(default_factory=lambda: f"file_{uuid.uuid4().hex[:12]}")
@@ -176,11 +176,11 @@ class File(BaseDocument):
     storage_path: str
     file_type: str
     size: int
-    owner_id: str
+    owner_id: Optional[str] = None
     folder_id: Optional[str] = None
     tags: List[str] = Field(default_factory=list)
     is_deleted: bool = False
-    organization_id: str
+    organization_id: Optional[str] = None
 
 # HR Models
 class Employee(BaseDocument):
@@ -195,7 +195,7 @@ class Employee(BaseDocument):
     certifications: List[str] = Field(default_factory=list)
     salary: Optional[float] = None
     status: str = "active"
-    organization_id: str
+    organization_id: Optional[str] = None
 
 class Department(BaseDocument):
     dept_id: str = Field(default_factory=lambda: f"dept_{uuid.uuid4().hex[:12]}")
@@ -204,7 +204,7 @@ class Department(BaseDocument):
     head_id: Optional[str] = None
     members: List[str] = Field(default_factory=list)
     budget: Optional[float] = None
-    organization_id: str
+    organization_id: Optional[str] = None
 
 class Attendance(BaseDocument):
     attendance_id: str = Field(default_factory=lambda: f"att_{uuid.uuid4().hex[:12]}")
@@ -214,7 +214,7 @@ class Attendance(BaseDocument):
     check_out: Optional[str] = None
     status: str = "present"  # present, absent, half_day, leave
     notes: Optional[str] = None
-    organization_id: str
+    organization_id: Optional[str] = None
 
 class Leave(BaseDocument):
     leave_id: str = Field(default_factory=lambda: f"leave_{uuid.uuid4().hex[:12]}")
@@ -225,7 +225,7 @@ class Leave(BaseDocument):
     reason: Optional[str] = None
     status: str = "pending"  # pending, approved, rejected
     approver_id: Optional[str] = None
-    organization_id: str
+    organization_id: Optional[str] = None
 
 # Finance Models
 class Transaction(BaseDocument):
@@ -241,7 +241,7 @@ class Transaction(BaseDocument):
     status: str = "completed"
     reference_number: Optional[str] = None
     notes: Optional[str] = None
-    organization_id: str
+    organization_id: Optional[str] = None
 
 class Invoice(BaseDocument):
     invoice_id: str = Field(default_factory=lambda: f"inv_{uuid.uuid4().hex[:12]}")
@@ -256,7 +256,7 @@ class Invoice(BaseDocument):
     discount: float = 0.0
     total_amount: float
     payment_status: str = "pending"  # pending, paid, overdue, cancelled
-    organization_id: str
+    organization_id: Optional[str] = None
 
 # Communication Models
 class Message(BaseDocument):
@@ -268,7 +268,7 @@ class Message(BaseDocument):
     message_type: str = "text"  # text, image, file, voice
     attachments: List[str] = Field(default_factory=list)
     is_read: bool = False
-    organization_id: str
+    organization_id: Optional[str] = None
 
 # Calendar Models
 class Event(BaseDocument):
@@ -286,7 +286,7 @@ class Event(BaseDocument):
     start_time: str
     end_time: str
     status: str = "scheduled"  # scheduled, ongoing, completed, cancelled
-    organization_id: str
+    organization_id: Optional[str] = None
 
 # Support Models
 class Ticket(BaseDocument):
@@ -299,7 +299,7 @@ class Ticket(BaseDocument):
     status: str = "open"  # open, pending, in_progress, resolved, closed
     assigned_agent_id: Optional[str] = None
     tags: List[str] = Field(default_factory=list)
-    organization_id: str
+    organization_id: Optional[str] = None
 
 # AI Chat Models
 class AIConversation(BaseDocument):
@@ -308,7 +308,7 @@ class AIConversation(BaseDocument):
     title: str = "New Conversation"
     model: str = "gpt-5.2"
     messages: List[Dict[str, str]] = Field(default_factory=list)
-    organization_id: str
+    organization_id: Optional[str] = None
 
 # Workspace Models
 class Workspace(BaseDocument):
@@ -317,7 +317,7 @@ class Workspace(BaseDocument):
     description: Optional[str] = None
     logo: Optional[str] = None
     members: List[str] = Field(default_factory=list)
-    organization_id: str
+    organization_id: Optional[str] = None
 
 # Notification Models
 class Notification(BaseDocument):

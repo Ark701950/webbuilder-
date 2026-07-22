@@ -9,6 +9,8 @@ export const Projects = () => {
   const [tasks, setTasks] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showProjectForm, setShowProjectForm] = useState(false);
+  const [formError, setFormError] = useState('');
+  const [submitting, setSubmitting] = useState(false);
   const [projectForm, setProjectForm] = useState({
     name: '',
     description: '',
@@ -38,6 +40,8 @@ export const Projects = () => {
 
   const handleCreateProject = async (e) => {
     e.preventDefault();
+    setFormError('');
+    setSubmitting(true);
     try {
       await apiClient.post('/projects', projectForm);
       setShowProjectForm(false);
@@ -45,6 +49,10 @@ export const Projects = () => {
       fetchData();
     } catch (error) {
       console.error('Failed to create project:', error);
+      const detail = error.response?.data?.detail;
+      setFormError(typeof detail === 'string' ? detail : 'Failed to create project. Please try again.');
+    } finally {
+      setSubmitting(false);
     }
   };
 
@@ -175,6 +183,11 @@ export const Projects = () => {
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
             <div className="w-full max-w-md rounded-xl border border-border bg-surface p-6">
               <h2 className="text-2xl font-bold text-foreground">Create New Project</h2>
+              {formError && (
+                <div className="mt-4 rounded-lg border border-destructive/20 bg-destructive/10 p-3 text-sm text-destructive" data-testid="project-form-error">
+                  {formError}
+                </div>
+              )}
               <form onSubmit={handleCreateProject} className="mt-6 space-y-4">
                 <div>
                   <label className="block text-sm font-medium text-foreground">Project Name</label>
@@ -232,9 +245,11 @@ export const Projects = () => {
                   </button>
                   <button
                     type="submit"
-                    className="flex-1 rounded-lg bg-primary px-4 py-2.5 font-medium text-white hover:bg-accent-hover transition-colors"
+                    disabled={submitting}
+                    className="flex-1 rounded-lg bg-primary px-4 py-2.5 font-medium text-white hover:bg-accent-hover transition-colors disabled:opacity-50"
+                    data-testid="submit-project-button"
                   >
-                    Create Project
+                    {submitting ? 'Creating...' : 'Create Project'}
                   </button>
                 </div>
               </form>
