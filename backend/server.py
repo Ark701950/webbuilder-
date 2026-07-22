@@ -158,8 +158,20 @@ async def register(data: RegisterRequest):
 
 @api_router.post("/auth/login")
 async def login(data: LoginRequest):
-    """User login"""
-    user_doc = await db.users.find_one({"email": data.email}, {"_id": 0})
+    """User login - accepts email OR username"""
+    identifier = (data.email or "").strip()
+    if not identifier:
+        raise HTTPException(status_code=400, detail="Email or username required")
+    
+    # Look up by email first, fall back to username (case-insensitive)
+    user_doc = await db.users.find_one({"email": identifier}, {"_id": 0})
+    if not user_doc:
+        # Case-insensitive username lookup
+        user_doc = await db.users.find_one(
+            {"username": {"$regex": f"^{identifier}$", "$options": "i"}},
+            {"_id": 0}
+        )
+    
     if not user_doc:
         raise HTTPException(status_code=401, detail="Invalid credentials")
     
@@ -187,7 +199,14 @@ async def login(data: LoginRequest):
     
     return {
         "message": "Login successful",
-        "user": {"user_id": user_doc['user_id'], "email": user_doc['email'], "name": user_doc['name'], "role": user_doc.get('role', 'user')},
+        "user": {
+            "user_id": user_doc['user_id'],
+            "email": user_doc['email'],
+            "name": user_doc['name'],
+            "username": user_doc.get('username'),
+            "role": user_doc.get('role', 'user'),
+            "job_title": user_doc.get('job_title')
+        },
         "session_token": session_token
     }
 
@@ -1172,27 +1191,116 @@ app.add_middleware(
 
 @app.on_event("startup")
 async def startup():
-    """Startup tasks"""
+    """Startup tasks - seed default WebBuilder OS accounts"""
     logger.info("WebBuilder OS API starting...")
     
     # Initialize storage
     init_storage()
     
-    # Create default admin user if not exists
-    admin_email = os.environ.get('ADMIN_EMAIL', 'admin@webbuilder.com')
-    admin_user = await db.users.find_one({"email": admin_email})
+    # Default seed accounts for WebBuilder OS
+    # Each account can login using either email OR username
+    seed_accounts = [
+        {
+            "username": "Ark",
+            "password": "2010@",
+            "name": "Ark Dwivedi",
+            "email": "ark@webbuilder.com",
+            "role": "owner",
+            "job_title": "Founder",
+            "department": "Founder Office",
+            "permissions": ["*"],
+        },
+        {
+            "username": "Utkarsh",
+            "password": "2010@",
+            "name": "Utkarsh Mishra",
+            "email": "utkarsh@webbuilder.com",
+            "role": "owner",
+            "job_title": "Co-Founder",
+            "department": "Co-Founder Office",
+            "permissions": ["*"],
+        },
+        {
+            "username": "IOS",
+            "password": "2001009@",
+            "name": "System Administrator",
+            "email": "admin@webbuilder.com",
+            "role": "admin",
+            "job_title": "Administrator",
+            "department": "Admin Portal",
+            "permissions": ["*"],
+        },
+        {
+            "username": "Tech",
+            "password": "2010@",
+            "name": "Technical Lead",
+            "email": "tech@webbuilder.com",
+            "role": "manager",
+            "job_title": "Head of Technical & Design",
+            "department": "Technical & Design Office",
+            "permissions": ["view_users", "create_client", "create_project"],
+        },
+        {
+            "username": "Finance",
+            "password": "2010@",
+            "name": "Finance Manager",
+            "email": "finance@webbuilder.com",
+            "role": "manager",
+            "job_title": "Head of Finance",
+            "department": "Finance Office",
+            "permissions": ["view_users", "create_client", "manage_billing"],
+        },
+        {
+            "username": "Collab",
+            "password": "2010@",
+            "name": "Collaboration Lead",
+            "email": "collab@webbuilder.com",
+            "role": "manager",
+            "job_title": "Head of Collaboration",
+            "department": "Collaboration Office",
+            "permissions": ["view_users", "create_client", "create_project"],
+        },
+    ]
     
-    if not admin_user:
-        logger.info("Creating default admin user...")
-        admin = User(
-            name="Admin",
-            email=admin_email,
-            password_hash=hash_password("Admin@123"),
-            role="owner",
-            permissions=["*"]
+    for acct in seed_accounts:
+        existing = await db.users.find_one(
+            {"$or": [{"email": acct["email"]}, {"username": acct["username"]}]}
         )
-        await db.users.insert_one(admin.model_dump())
-        logger.info(f"Admin user created: {admin_email} / Admin@123")
+        if existing:
+            # Backfill/upgrade existing account to match seed config exactly
+            # (safe because these are the canonical WebBuilder OS system accounts)
+            updates = {
+                "username": acct["username"],
+                "name": acct["name"],
+                "email": acct["email"],
+                "password_hash": hash_password(acct["password"]),
+                "role": acct["role"],
+                "job_title": acct["job_title"],
+                "department": acct["department"],
+                "permissions": acct["permissions"],
+                "status": "active",
+                "updated_at": datetime.now(timezone.utc).isoformat(),
+            }
+            await db.users.update_one(
+                {"user_id": existing["user_id"]},
+                {"$set": updates}
+            )
+            logger.info(f"Synced seed account: {acct['username']} ({acct['email']})")
+            continue
+        
+        user = User(
+            name=acct["name"],
+            username=acct["username"],
+            email=acct["email"],
+            password_hash=hash_password(acct["password"]),
+            role=acct["role"],
+            job_title=acct["job_title"],
+            department=acct["department"],
+            permissions=acct["permissions"],
+            status="active",
+        )
+        await db.users.insert_one(user.model_dump())
+        logger.info(f"Seeded account: {acct['username']} ({acct['email']}) - {acct['job_title']}")
 
 @app.on_event("shutdown")
 async def shutdown_db_client():

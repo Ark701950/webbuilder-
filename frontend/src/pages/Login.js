@@ -6,7 +6,7 @@ import { AUTH } from '../constants/testIds';
 import { LogIn } from 'lucide-react';
 
 export const Login = () => {
-  const [email, setEmail] = useState('');
+  const [emailOrUsername, setEmailOrUsername] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
@@ -19,7 +19,8 @@ export const Login = () => {
     setLoading(true);
 
     try {
-      const response = await apiClient.post('/auth/login', { email, password });
+      // Backend accepts either email or username in the 'email' field
+      const response = await apiClient.post('/auth/login', { email: emailOrUsername, password });
       login(response.data.user, response.data.session_token);
       navigate('/dashboard');
     } catch (err) {
@@ -60,17 +61,18 @@ export const Login = () => {
           <form onSubmit={handleSubmit} data-testid={AUTH.loginForm} className="space-y-4">
             <div>
               <label htmlFor="email" className="mb-2 block text-sm font-medium text-foreground">
-                Email
+                Email or Username
               </label>
               <input
                 id="email"
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
+                type="text"
+                value={emailOrUsername}
+                onChange={(e) => setEmailOrUsername(e.target.value)}
                 required
                 data-testid={AUTH.loginEmail}
                 className="w-full rounded-lg border border-input bg-background px-4 py-2.5 text-foreground focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
-                placeholder="you@example.com"
+                placeholder="you@example.com or Ark"
+                autoComplete="username"
               />
             </div>
 
