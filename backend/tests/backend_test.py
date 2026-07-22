@@ -133,6 +133,151 @@ class TestProjects:
         assert r4.status_code == 200
 
 
+# ---------- Documents ----------
+class TestDocuments:
+    def test_create_and_list_document(self, auth_headers):
+        payload = {"title": f"TEST_Doc_{uuid.uuid4().hex[:6]}", "description": "desc", "content": "hello"}
+        r = requests.post(f"{API}/documents", json=payload, headers=auth_headers, timeout=15)
+        assert r.status_code == 200, r.text
+        doc = r.json()["document"]
+        assert doc["title"] == payload["title"]
+        r2 = requests.get(f"{API}/documents", headers=auth_headers, timeout=15)
+        assert r2.status_code == 200
+        assert any(d["doc_id"] == doc["doc_id"] for d in r2.json()["documents"])
+
+
+# ---------- HR ----------
+class TestHR:
+    def test_create_department(self, auth_headers):
+        payload = {"name": f"TEST_Dept_{uuid.uuid4().hex[:6]}", "description": "d"}
+        r = requests.post(f"{API}/departments", json=payload, headers=auth_headers, timeout=15)
+        assert r.status_code == 200, r.text
+        dept = r.json()["department"]
+        r2 = requests.get(f"{API}/departments", headers=auth_headers, timeout=15)
+        assert r2.status_code == 200
+        assert any(d["dept_id"] == dept["dept_id"] for d in r2.json()["departments"])
+
+    def test_create_employee(self, auth_headers):
+        payload = {
+            "user_id": f"placeholder_{uuid.uuid4().hex[:6]}",
+            "position": "Engineer",
+            "joining_date": "2026-01-01",
+        }
+        r = requests.post(f"{API}/employees", json=payload, headers=auth_headers, timeout=15)
+        assert r.status_code == 200, r.text
+        emp = r.json()["employee"]
+        assert emp["position"] == "Engineer"
+        r2 = requests.get(f"{API}/employees", headers=auth_headers, timeout=15)
+        assert r2.status_code == 200
+
+    def test_create_leave(self, auth_headers):
+        payload = {
+            "employee_id": "emp_placeholder",
+            "leave_type": "casual",
+            "start_date": "2026-02-01",
+            "end_date": "2026-02-02",
+        }
+        r = requests.post(f"{API}/leaves", json=payload, headers=auth_headers, timeout=15)
+        assert r.status_code == 200, r.text
+        r2 = requests.get(f"{API}/leaves", headers=auth_headers, timeout=15)
+        assert r2.status_code == 200
+
+
+# ---------- Finance ----------
+class TestFinance:
+    def test_create_transaction(self, auth_headers):
+        payload = {
+            "type": "income",
+            "category": "sales",
+            "amount": 1000.0,
+            "date": "2026-01-15",
+        }
+        r = requests.post(f"{API}/transactions", json=payload, headers=auth_headers, timeout=15)
+        assert r.status_code == 200, r.text
+        txn = r.json()["transaction"]
+        assert txn["amount"] == 1000.0
+        r2 = requests.get(f"{API}/transactions", headers=auth_headers, timeout=15)
+        assert r2.status_code == 200
+
+    def test_create_invoice(self, auth_headers):
+        payload = {
+            "invoice_number": f"INV_{uuid.uuid4().hex[:6]}",
+            "client_id": "client_placeholder",
+            "issue_date": "2026-01-01",
+            "due_date": "2026-02-01",
+            "subtotal": 500.0,
+            "total_amount": 500.0,
+        }
+        r = requests.post(f"{API}/invoices", json=payload, headers=auth_headers, timeout=15)
+        assert r.status_code == 200, r.text
+        r2 = requests.get(f"{API}/invoices", headers=auth_headers, timeout=15)
+        assert r2.status_code == 200
+
+    def test_finance_summary(self, auth_headers):
+        r = requests.get(f"{API}/finance/summary", headers=auth_headers, timeout=15)
+        assert r.status_code == 200
+        d = r.json()
+        for k in ["total_income", "total_expense", "net_profit", "pending_invoices_count", "pending_invoices_amount", "total_invoices"]:
+            assert k in d
+
+
+# ---------- Calendar ----------
+class TestCalendar:
+    def test_create_and_list_event(self, auth_headers):
+        payload = {
+            "title": f"TEST_Event_{uuid.uuid4().hex[:6]}",
+            "start_time": "2026-02-01T10:00:00",
+            "end_time": "2026-02-01T11:00:00",
+        }
+        r = requests.post(f"{API}/events", json=payload, headers=auth_headers, timeout=15)
+        assert r.status_code == 200, r.text
+        ev = r.json()["event"]
+        r2 = requests.get(f"{API}/events", headers=auth_headers, timeout=15)
+        assert r2.status_code == 200
+        assert any(e["event_id"] == ev["event_id"] for e in r2.json()["events"])
+
+
+# ---------- Admin ----------
+class TestAdmin:
+    def test_admin_stats(self, auth_headers):
+        r = requests.get(f"{API}/admin/stats", headers=auth_headers, timeout=15)
+        assert r.status_code == 200, r.text
+        d = r.json()
+        for k in ["total_users", "active_users", "total_organizations", "total_files"]:
+            assert k in d and isinstance(d[k], int)
+
+    def test_admin_update_and_delete_user(self, auth_headers):
+        # Create user via register
+        email = f"TEST_admin_{uuid.uuid4().hex[:8]}@test.com"
+        r = requests.post(f"{API}/auth/register", json={"name": "T", "email": email, "password": "Test@1234"}, timeout=15)
+        assert r.status_code == 200
+        # Find user_id via /users (admin)
+        r_users = requests.get(f"{API}/users", headers=auth_headers, timeout=15)
+        assert r_users.status_code == 200
+        target = next((u for u in r_users.json()["users"] if u["email"] == email), None)
+        assert target is not None
+        uid = target["user_id"]
+
+        # Update role
+        r_upd = requests.put(f"{API}/admin/users/{uid}", json={"role": "manager", "status": "active"}, headers=auth_headers, timeout=15)
+        assert r_upd.status_code == 200, r_upd.text
+
+        # Suspend
+        r_del = requests.delete(f"{API}/admin/users/{uid}", headers=auth_headers, timeout=15)
+        assert r_del.status_code == 200
+
+
+# ---------- AI ----------
+class TestAI:
+    def test_ai_message(self, auth_headers):
+        payload = {"message": "Say hello briefly", "model": "gpt-5.2"}
+        r = requests.post(f"{API}/ai/message", json=payload, headers=auth_headers, timeout=90)
+        assert r.status_code == 200, r.text
+        d = r.json()
+        assert "response" in d and isinstance(d["response"], str) and len(d["response"]) > 0
+        assert "conversation_id" in d
+
+
 # ---------- Logout ----------
 class TestLogout:
     def test_logout(self, auth_headers):

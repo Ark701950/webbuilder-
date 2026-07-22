@@ -573,6 +573,279 @@ async def get_dashboard_stats(user: User = Depends(get_current_user)):
         "total_employees": total_employees
     }
 
+# ==================== HR MODULE ====================
+
+@api_router.post("/employees")
+async def create_employee(emp_data: Employee, user: User = Depends(get_current_user)):
+    """Create new employee"""
+    emp_data.organization_id = user.organization_id or "default"
+    await db.employees.insert_one(emp_data.model_dump())
+    return {"message": "Employee created", "employee": emp_data}
+
+@api_router.get("/employees")
+async def list_employees(user: User = Depends(get_current_user)):
+    """List employees"""
+    employees = await db.employees.find(
+        {"organization_id": user.organization_id or "default"},
+        {"_id": 0}
+    ).to_list(1000)
+    return {"employees": employees}
+
+@api_router.post("/departments")
+async def create_department(dept_data: Department, user: User = Depends(get_current_user)):
+    """Create department"""
+    dept_data.organization_id = user.organization_id or "default"
+    await db.departments.insert_one(dept_data.model_dump())
+    return {"message": "Department created", "department": dept_data}
+
+@api_router.get("/departments")
+async def list_departments(user: User = Depends(get_current_user)):
+    """List departments"""
+    depts = await db.departments.find(
+        {"organization_id": user.organization_id or "default"},
+        {"_id": 0}
+    ).to_list(1000)
+    return {"departments": depts}
+
+@api_router.post("/leaves")
+async def create_leave(leave_data: Leave, user: User = Depends(get_current_user)):
+    """Create leave request"""
+    leave_data.organization_id = user.organization_id or "default"
+    await db.leaves.insert_one(leave_data.model_dump())
+    return {"message": "Leave request created", "leave": leave_data}
+
+@api_router.get("/leaves")
+async def list_leaves(user: User = Depends(get_current_user)):
+    """List leave requests"""
+    leaves = await db.leaves.find(
+        {"organization_id": user.organization_id or "default"},
+        {"_id": 0}
+    ).to_list(1000)
+    return {"leaves": leaves}
+
+# ==================== FINANCE MODULE ====================
+
+@api_router.post("/transactions")
+async def create_transaction(txn_data: Transaction, user: User = Depends(get_current_user)):
+    """Create transaction"""
+    txn_data.organization_id = user.organization_id or "default"
+    await db.transactions.insert_one(txn_data.model_dump())
+    return {"message": "Transaction created", "transaction": txn_data}
+
+@api_router.get("/transactions")
+async def list_transactions(user: User = Depends(get_current_user)):
+    """List transactions"""
+    txns = await db.transactions.find(
+        {"organization_id": user.organization_id or "default"},
+        {"_id": 0}
+    ).sort("date", -1).to_list(1000)
+    return {"transactions": txns}
+
+@api_router.post("/invoices")
+async def create_invoice(inv_data: Invoice, user: User = Depends(get_current_user)):
+    """Create invoice"""
+    inv_data.organization_id = user.organization_id or "default"
+    await db.invoices.insert_one(inv_data.model_dump())
+    return {"message": "Invoice created", "invoice": inv_data}
+
+@api_router.get("/invoices")
+async def list_invoices(user: User = Depends(get_current_user)):
+    """List invoices"""
+    invoices = await db.invoices.find(
+        {"organization_id": user.organization_id or "default"},
+        {"_id": 0}
+    ).to_list(1000)
+    return {"invoices": invoices}
+
+@api_router.get("/finance/summary")
+async def finance_summary(user: User = Depends(get_current_user)):
+    """Get finance summary"""
+    org_filter = {"organization_id": user.organization_id or "default"}
+    
+    income_txns = await db.transactions.find({**org_filter, "type": "income"}, {"_id": 0}).to_list(10000)
+    expense_txns = await db.transactions.find({**org_filter, "type": "expense"}, {"_id": 0}).to_list(10000)
+    
+    total_income = sum(t.get('amount', 0) for t in income_txns)
+    total_expense = sum(t.get('amount', 0) for t in expense_txns)
+    
+    invoices = await db.invoices.find(org_filter, {"_id": 0}).to_list(10000)
+    pending_invoices = [i for i in invoices if i.get('payment_status') == 'pending']
+    total_pending = sum(i.get('total_amount', 0) for i in pending_invoices)
+    
+    return {
+        "total_income": total_income,
+        "total_expense": total_expense,
+        "net_profit": total_income - total_expense,
+        "pending_invoices_count": len(pending_invoices),
+        "pending_invoices_amount": total_pending,
+        "total_invoices": len(invoices)
+    }
+
+# ==================== CALENDAR MODULE ====================
+
+@api_router.post("/events")
+async def create_event(event_data: Event, user: User = Depends(get_current_user)):
+    """Create event"""
+    event_data.organization_id = user.organization_id or "default"
+    event_data.organizer_id = user.user_id
+    await db.events.insert_one(event_data.model_dump())
+    return {"message": "Event created", "event": event_data}
+
+@api_router.get("/events")
+async def list_events(user: User = Depends(get_current_user)):
+    """List events"""
+    events = await db.events.find(
+        {"organization_id": user.organization_id or "default"},
+        {"_id": 0}
+    ).sort("start_time", 1).to_list(1000)
+    return {"events": events}
+
+# ==================== ADMIN MODULE ====================
+
+@api_router.get("/admin/stats")
+async def admin_stats(user: User = Depends(get_current_user)):
+    """Admin panel statistics"""
+    if user.role not in ['owner', 'admin']:
+        raise HTTPException(status_code=403, detail="Admin access required")
+    
+    total_users = await db.users.count_documents({})
+    active_users = await db.users.count_documents({"status": "active"})
+    total_orgs = await db.organizations.count_documents({})
+    total_files = await db.files.count_documents({"is_deleted": False})
+    
+    return {
+        "total_users": total_users,
+        "active_users": active_users,
+        "total_organizations": total_orgs,
+        "total_files": total_files
+    }
+
+@api_router.put("/admin/users/{user_id}")
+async def admin_update_user(user_id: str, request: Request, user: User = Depends(get_current_user)):
+    """Admin: update user (role, status, etc.)"""
+    if user.role not in ['owner', 'admin']:
+        raise HTTPException(status_code=403, detail="Admin access required")
+    
+    body = await request.json()
+    allowed_fields = ['name', 'role', 'status', 'department', 'job_title', 'permissions']
+    updates = {k: v for k, v in body.items() if k in allowed_fields}
+    updates['updated_at'] = datetime.now(timezone.utc).isoformat()
+    
+    result = await db.users.update_one({"user_id": user_id}, {"$set": updates})
+    if result.matched_count == 0:
+        raise HTTPException(status_code=404, detail="User not found")
+    
+    return {"message": "User updated", "user_id": user_id}
+
+@api_router.delete("/admin/users/{user_id}")
+async def admin_delete_user(user_id: str, user: User = Depends(get_current_user)):
+    """Admin: soft delete (suspend) user"""
+    if user.role not in ['owner', 'admin']:
+        raise HTTPException(status_code=403, detail="Admin access required")
+    
+    if user_id == user.user_id:
+        raise HTTPException(status_code=400, detail="Cannot suspend yourself")
+    
+    result = await db.users.update_one(
+        {"user_id": user_id},
+        {"$set": {"status": "suspended", "updated_at": datetime.now(timezone.utc).isoformat()}}
+    )
+    if result.matched_count == 0:
+        raise HTTPException(status_code=404, detail="User not found")
+    
+    # Delete active sessions
+    await db.user_sessions.delete_many({"user_id": user_id})
+    
+    return {"message": "User suspended"}
+
+# ==================== AI NON-STREAMING (Simple) ====================
+
+@api_router.post("/ai/message")
+async def ai_message(request: Request, user: User = Depends(get_current_user)):
+    """AI chat non-streaming (simpler for UI). Returns full response as JSON."""
+    body = await request.json()
+    message = body.get('message', '')
+    model = body.get('model', 'gpt-5.2')
+    conversation_id = body.get('conversation_id')
+    
+    # Get or create conversation
+    if conversation_id:
+        conv_doc = await db.ai_conversations.find_one({"conversation_id": conversation_id}, {"_id": 0})
+        messages = conv_doc.get('messages', []) if conv_doc else []
+    else:
+        conversation_id = f"conv_{uuid.uuid4().hex[:12]}"
+        messages = []
+    
+    messages.append({"role": "user", "content": message})
+    
+    # Determine provider
+    if model.startswith('gpt') or model.startswith('o1') or model.startswith('o3') or model.startswith('o4'):
+        provider = 'openai'
+    elif model.startswith('claude'):
+        provider = 'anthropic'
+    elif model.startswith('gemini'):
+        provider = 'gemini'
+    else:
+        provider = 'openai'
+    
+    chat = LlmChat(
+        api_key=EMERGENT_LLM_KEY,
+        session_id=conversation_id,
+        system_message="You are a helpful AI assistant for WebBuilder OS, an enterprise business operating system. Help users with business tasks, data analysis, and decision-making. Be concise and professional."
+    ).with_model(provider, model)
+    
+    try:
+        full_response = ""
+        async for event in chat.stream_message(UserMessage(text=message)):
+            if isinstance(event, TextDelta):
+                full_response += event.content
+            elif isinstance(event, StreamDone):
+                break
+        
+        messages.append({"role": "assistant", "content": full_response})
+        
+        # Save conversation
+        title = messages[0]['content'][:50] if len(messages) > 0 else 'New Conversation'
+        await db.ai_conversations.update_one(
+            {"conversation_id": conversation_id},
+            {"$set": {
+                "conversation_id": conversation_id,
+                "user_id": user.user_id,
+                "title": title,
+                "messages": messages,
+                "model": model,
+                "updated_at": datetime.now(timezone.utc).isoformat(),
+                "organization_id": user.organization_id or "default"
+            }},
+            upsert=True
+        )
+        
+        return {
+            "conversation_id": conversation_id,
+            "response": full_response,
+            "model": model
+        }
+    except Exception as e:
+        logger.error(f"AI message error: {e}")
+        raise HTTPException(status_code=500, detail=f"AI error: {str(e)}")
+
+@api_router.get("/ai/conversations/{conversation_id}")
+async def get_conversation(conversation_id: str, user: User = Depends(get_current_user)):
+    """Get conversation history"""
+    conv = await db.ai_conversations.find_one(
+        {"conversation_id": conversation_id, "user_id": user.user_id},
+        {"_id": 0}
+    )
+    if not conv:
+        raise HTTPException(status_code=404, detail="Conversation not found")
+    return conv
+
+@api_router.delete("/ai/conversations/{conversation_id}")
+async def delete_conversation(conversation_id: str, user: User = Depends(get_current_user)):
+    """Delete conversation"""
+    await db.ai_conversations.delete_one({"conversation_id": conversation_id, "user_id": user.user_id})
+    return {"message": "Conversation deleted"}
+
 # Include router
 app.include_router(api_router)
 

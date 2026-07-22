@@ -276,7 +276,7 @@ class Event(BaseDocument):
     title: str
     description: Optional[str] = None
     event_type: str = "meeting"  # meeting, deadline, reminder
-    organizer_id: str
+    organizer_id: Optional[str] = None
     participants: List[str] = Field(default_factory=list)
     workspace_id: Optional[str] = None
     project_id: Optional[str] = None

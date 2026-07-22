@@ -8,38 +8,23 @@ import { Register } from './pages/Register';
 import { Dashboard } from './pages/Dashboard';
 import { CRM } from './pages/CRM';
 import { Projects } from './pages/Projects';
+import { Documents } from './pages/Documents';
+import { HR } from './pages/HR';
+import { Finance } from './pages/Finance';
+import { Calendar } from './pages/Calendar';
+import { Analytics } from './pages/Analytics';
+import { AIAssistant } from './pages/AIAssistant';
+import { Admin } from './pages/Admin';
+import { DesignStudio } from './pages/DesignStudio';
+import { Messages } from './pages/Messages';
+import { Support } from './pages/Support';
 import './App.css';
-
-// Placeholder pages for other modules
-const PlaceholderPage = ({ title }) => {
-  const { MainLayout } = require('./components/MainLayout');
-  return (
-    <MainLayout>
-      <div className="flex h-full items-center justify-center">
-        <div className="text-center">
-          <h1 className="text-4xl font-bold text-foreground">{title}</h1>
-          <p className="mt-4 text-muted-foreground">This module is under development</p>
-        </div>
-      </div>
-    </MainLayout>
-  );
-};
-
-const Documents = () => <PlaceholderPage title="Documents" />;
-const HR = () => <PlaceholderPage title="HR Management" />;
-const Finance = () => <PlaceholderPage title="Finance" />;
-const Calendar = () => <PlaceholderPage title="Calendar" />;
-const Messages = () => <PlaceholderPage title="Messages" />;
-const Analytics = () => <PlaceholderPage title="Analytics" />;
-const AI = () => <PlaceholderPage title="AI Assistant" />;
-const Support = () => <PlaceholderPage title="Customer Support" />;
-const Admin = () => <PlaceholderPage title="Admin Portal" />;
 
 function AppRouter() {
   const location = useLocation();
   
-  // Check URL fragment for session_id during render (NOT in useEffect)
-  // This synchronous check prevents race conditions
+  // CRITICAL: Check URL fragment for session_id during render (NOT in useEffect)
+  // This synchronous check prevents race conditions with OAuth callback
   if (location.hash?.includes('session_id=')) {
     return <AuthCallback />;
   }
@@ -60,9 +45,10 @@ function AppRouter() {
       <Route path="/calendar" element={<ProtectedRoute><Calendar /></ProtectedRoute>} />
       <Route path="/messages" element={<ProtectedRoute><Messages /></ProtectedRoute>} />
       <Route path="/analytics" element={<ProtectedRoute><Analytics /></ProtectedRoute>} />
-      <Route path="/ai" element={<ProtectedRoute><AI /></ProtectedRoute>} />
+      <Route path="/ai" element={<ProtectedRoute><AIAssistant /></ProtectedRoute>} />
       <Route path="/support/*" element={<ProtectedRoute><Support /></ProtectedRoute>} />
       <Route path="/admin/*" element={<ProtectedRoute><Admin /></ProtectedRoute>} />
+      <Route path="/design-studio" element={<ProtectedRoute><DesignStudio /></ProtectedRoute>} />
       
       {/* Redirect root to dashboard */}
       <Route path="/" element={<Navigate to="/dashboard" replace />} />

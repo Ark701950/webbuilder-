@@ -1,6 +1,6 @@
 import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { Home, Users, Briefcase, FolderOpen, Calendar, MessageSquare, BarChart3, Bot, Settings, LayoutDashboard, Building2, FileText, DollarSign, HeadphonesIcon } from 'lucide-react';
+import { Home, Users, Briefcase, FolderOpen, Calendar, MessageSquare, BarChart3, Bot, Settings, LayoutDashboard, Building2, FileText, DollarSign, HeadphonesIcon, Palette } from 'lucide-react';
 
 const navigation = [
   { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard, testId: 'nav-dashboard' },
@@ -17,6 +17,7 @@ const navigation = [
 ];
 
 const bottomNavigation = [
+  { name: 'Design Studio', href: '/design-studio', icon: Palette, testId: 'nav-design-studio' },
   { name: 'Admin Portal', href: '/admin', icon: Settings, testId: 'nav-admin' },
 ];
 
