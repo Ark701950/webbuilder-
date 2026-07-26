@@ -23,8 +23,8 @@ export const CRM = () => {
 
   useEffect(() => {
     fetchData();
-  }, [activeTab]);
-
+ // eslint-disable-next-line react-hooks/exhaustive-deps
+}, [activeTab]);
   const fetchData = async () => {
     setLoading(true);
     try {
