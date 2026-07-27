@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { MainLayout } from '../components/MainLayout';
 import { apiClient } from '../utils/api';
 import { Plus, Building2, Users, TrendingUp, Mail, Phone, Globe } from 'lucide-react';
@@ -21,11 +21,11 @@ export const CRM = () => {
     status: 'active'
   });
 
-  useEffect(() => {
-    fetchData();
- // eslint-disable-next-line react-hooks/exhaustive-deps
+ useEffect(() => {
+  fetchData();
+}, [fetchData]);
 }, [activeTab]);
-  const fetchData = async () => {
+const fetchData = useCallback(async () => {
     setLoading(true);
     try {
       if (activeTab === 'clients') {
@@ -40,7 +40,7 @@ export const CRM = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [activeTab]);
 
   const handleCreateClient = async (e) => {
     e.preventDefault();
