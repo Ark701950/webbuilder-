@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { MainLayout } from '../components/MainLayout';
 import { apiClient } from '../utils/api';
 import { PageHeader, Modal, Input, Button, Badge, EmptyState } from '../components/ui-kit';
@@ -21,6 +21,8 @@ export const Messages = () => {
 // eslint-disable-next-line react-hooks/exhaustive-deps
 useEffect(() => {
   fetchChannels();
+}, [fetchChannels]);
+  fetchChannels();
 }, []);
   useEffect(() => { fetchChannels(); }, []);
 
@@ -34,7 +36,7 @@ useEffect(() => {
       fetchMessages(activeChannel.channel_id);
       pollingRef.current = setInterval(() => fetchMessages(activeChannel.channel_id, true), 5000);
     }
-    return () => { if (pollingRef.current) clearInterval(pollingRef.current); };
+  const fetchChannels = useCallback(async () => {
   }, [activeChannel]);
 
   const fetchChannels = async () => {
@@ -44,7 +46,7 @@ useEffect(() => {
       setChannels(res.data.channels || []);
       if ((res.data.channels || []).length > 0 && !activeChannel) {
         setActiveChannel(res.data.channels[0]);
-      }
+      }, [activeChannel]);
     } catch (e) { console.error(e); }
     finally { setLoading(false); }
   };
