@@ -21,26 +21,27 @@ export const CRM = () => {
     status: 'active'
   });
 
- useEffect(() => {
+ const fetchData = useCallback(async () => {
+  setLoading(true);
+
+  try {
+    if (activeTab === 'clients') {
+      const response = await apiClient.get('/clients');
+      setClients(response.data.clients || []);
+    } else {
+      const response = await apiClient.get('/leads');
+      setLeads(response.data.leads || []);
+    }
+  } catch (error) {
+    console.error('Failed to fetch data:', error);
+  } finally {
+    setLoading(false);
+  }
+}, [activeTab]);
+
+useEffect(() => {
   fetchData();
 }, [fetchData]);
-}, [activeTab]);
-const fetchData = useCallback(async () => {
-    setLoading(true);
-    try {
-      if (activeTab === 'clients') {
-        const response = await apiClient.get('/clients');
-        setClients(response.data.clients || []);
-      } else {
-        const response = await apiClient.get('/leads');
-        setLeads(response.data.leads || []);
-      }
-    } catch (error) {
-      console.error('Failed to fetch data:', error);
-    } finally {
-      setLoading(false);
-    }
-  }, [activeTab]);
 
   const handleCreateClient = async (e) => {
     e.preventDefault();
