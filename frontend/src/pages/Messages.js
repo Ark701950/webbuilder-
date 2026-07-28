@@ -18,13 +18,6 @@ export const Messages = () => {
   const [loading, setLoading] = useState(true);
   const messagesEndRef = useRef(null);
   const pollingRef = useRef(null);
-// eslint-disable-next-line react-hooks/exhaustive-deps
-useEffect(() => {
-  fetchChannels();
-}, [fetchChannels]);
-  fetchChannels();
-}, []);
-  useEffect(() => { fetchChannels(); }, []);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
