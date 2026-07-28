@@ -30,27 +30,40 @@ useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
 
-  useEffect(() => {
-    // Poll for new messages every 5s while a channel is active
-    if (activeChannel) {
-      fetchMessages(activeChannel.channel_id);
-      pollingRef.current = setInterval(() => fetchMessages(activeChannel.channel_id, true), 5000);
+ const fetchChannels = useCallback(async () => {
+  setLoading(true);
+  try {
+    const res = await apiClient.get('/channels');
+    const chs = res.data.channels || [];
+
+    setChannels(chs);
+
+    if (chs.length > 0 && !activeChannel) {
+      setActiveChannel(chs[0]);
     }
-  const fetchChannels = useCallback(async () => {
-  }, [activeChannel]);
+  } catch (e) {
+    console.error(e);
+  } finally {
+    setLoading(false);
+  }
+}, [activeChannel]);
 
-  const fetchChannels = async () => {
-    setLoading(true);
-    try {
-      const res = await apiClient.get('/channels');
-      setChannels(res.data.channels || []);
-      if ((res.data.channels || []).length > 0 && !activeChannel) {
-        setActiveChannel(res.data.channels[0]);
-      }, [activeChannel]);
-    } catch (e) { console.error(e); }
-    finally { setLoading(false); }
+useEffect(() => {
+  if (!activeChannel) {
+    if (pollingRef.current) clearInterval(pollingRef.current);
+    return;
+  }
+
+  fetchMessages(activeChannel.channel_id);
+
+  pollingRef.current = setInterval(() => {
+    fetchMessages(activeChannel.channel_id, true);
+  }, 5000);
+
+  return () => {
+    if (pollingRef.current) clearInterval(pollingRef.current);
   };
-
+}, [activeChannel]);
   const fetchMessages = async (channelId, silent = false) => {
     try {
       const res = await apiClient.get('/messages', { params: { channel_id: channelId } });
