@@ -10,8 +10,13 @@ from datetime import datetime, timezone, timedelta
 from typing import List, Optional
 import uuid
 import requests
-from emergentintegrations.llm.chat import LlmChat, UserMessage, TextDelta, StreamDone
-
+# Temporary: AI imports disabled during migration to LiteLLM
+# from emergentintegrations.llm.chat import (
+#     LlmChat,
+#     UserMessage,
+#     TextDelta,
+#     StreamDone,
+# )
 # Import models and auth
 from models import (
     User, UserSession, LoginRequest, RegisterRequest,
