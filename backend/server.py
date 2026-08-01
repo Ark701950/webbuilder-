@@ -51,9 +51,22 @@ ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / '.env')
 
 # MongoDB connection
-mongo_url = os.environ['MONGO_URL']
+mongo_url = os.getenv("MONGO_URL")
+db_name = os.getenv("DB_NAME")
+
+print("========== ENV DEBUG ==========")
+print("MONGO_URL exists:", bool(mongo_url))
+print("DB_NAME:", db_name)
+print("===============================")
+
+if not mongo_url:
+    raise Exception("MONGO_URL environment variable is missing")
+
+if not db_name:
+    raise Exception("DB_NAME environment variable is missing")
+
 client = AsyncIOMotorClient(mongo_url)
-db = client[os.environ['DB_NAME']]
+db = client[db_name]
 
 # Configuration
 EMERGENT_LLM_KEY = os.environ.get('EMERGENT_LLM_KEY')
