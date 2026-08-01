@@ -79,8 +79,14 @@ storage_key = None
 def init_storage():
     """Initialize object storage - call once at startup"""
     global storage_key
+
+    if not STORAGE_URL:
+        logger.warning("STORAGE_URL not configured, skipping storage initialization")
+        return None
+
     if storage_key:
         return storage_key
+
     try:
         resp = requests.post(
             f"{STORAGE_URL}/init",
@@ -1367,9 +1373,14 @@ app.add_middleware(
 async def startup():
     """Startup tasks - seed default WebBuilder OS accounts"""
     logger.info("WebBuilder OS API starting...")
-    
+
     # Initialize storage
-    init_storage()
+    try:
+        init_storage()
+    except Exception as e:
+        logger.warning(f"Storage disabled: {e}")
+
+    # Default seed accounts for WebBuilder OS
     
     # Default seed accounts for WebBuilder OS
     # Each account can login using either email OR username
